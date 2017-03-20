@@ -34,6 +34,28 @@ import java.util.Collections;
  */
 public class Tools {
 
+     public static String read(File f) throws IOException {
+        String content = "";
+        if (!f.exists()) {
+            return "";
+        }
+        FileInputStream fstream = new FileInputStream(f);
+        BufferedReader br = new BufferedReader(new InputStreamReader(fstream));
+        
+        String strLine;
+
+//Read File Line By Line
+        while ((strLine = br.readLine()) != null) {
+            // Print the content on the console
+            content += strLine;
+            content += "\n";
+            // System.out.println(strLine);
+        }
+
+//Close the input stream
+        br.close();
+        return content;
+    }
     public static void write(File f, String text) {
         try (FileWriter fw = new FileWriter(f);
                 PrintWriter pw = new PrintWriter(fw)) {
