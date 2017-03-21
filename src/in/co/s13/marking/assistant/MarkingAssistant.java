@@ -28,6 +28,7 @@ public class MarkingAssistant extends Application {
         new File("ASSIGNMENTS").mkdir();
         new File("SOLUTION").mkdir();
         new File("FEEDBACK").mkdir();
+        new File("app/sessions/").mkdirs();
         MainWindow mw = new MainWindow();
         try {
             mw.start(primaryStage);

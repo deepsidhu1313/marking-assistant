@@ -6,6 +6,9 @@
 package in.co.s13.marking.assistant.ui;
 
 import in.co.s13.marking.assistant.meta.GlobalValues;
+import in.co.s13.marking.assistant.meta.SessionSettings;
+import in.co.s13.marking.assistant.meta.Tools;
+import static in.co.s13.marking.assistant.meta.Tools.write;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -63,16 +66,23 @@ import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 
 import in.co.s13.marking.assistant.ui.CustomTree;
+import javafx.geometry.HPos;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.PasswordField;
+import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import javafx.stage.FileChooser;
+import org.controlsfx.control.action.Action;
+import org.json.JSONObject;
 
 /**
  *
  * @author NAVDEEP SINGH SIDHU <navdeepsingh.sidhu95@gmail.com>
  */
 public class MainWindow extends Application implements Runnable {
-    
+
     static CustomTree AllNodes = new CustomTree();
     public static Tab tab21, tab22, tab23, tab24;
     static Tab filesTab = new Tab("Files");
@@ -86,13 +96,13 @@ public class MainWindow extends Application implements Runnable {
     public static int tabcounter = 0;
     public static BorderPane bp;
     public static HBox statusBar;
-    
+
     Stage stage = new Stage();
     public static SplitPane LeftSplitPane;
     public static int selectedtab = 0;
     public static TextArea consoleArea = new TextArea();
     public static TabPane bottomTabPane;
-    
+
     @Override
     public void start(final Stage stage) throws Exception {
         this.stage = stage;
@@ -105,24 +115,32 @@ public class MainWindow extends Application implements Runnable {
 
         // --- Menu File
         Menu menuFile = new Menu("File");
-        
-        MenuItem prepare = new MenuItem("\tPrepare\t\t");
-        prepare.setOnAction(new EventHandler() {
+
+        MenuItem newSessionItem = new MenuItem("\tNew Session\t\t");
+        newSessionItem.setOnAction(new EventHandler() {
             public void handle(Event t) {
-                doPrepare();
+                doNewSession();
             }
         });
-        menuFile.getItems().add(prepare);
-        
+        menuFile.getItems().add(newSessionItem);
+
+        MenuItem continueSessionItem = new MenuItem("\tResume Session\t\t");
+        continueSessionItem.setOnAction(new EventHandler() {
+            public void handle(Event t) {
+                doContinueSession();
+            }
+        });
+        menuFile.getItems().add(continueSessionItem);
+
         MenuItem sync = new MenuItem("\tSync\t\t");
         sync.setOnAction(new EventHandler() {
             public void handle(Event t) {
-                
+
                 synchroniseUi();
             }
         });
         menuFile.getItems().add(sync);
-        
+
         MenuItem save = new MenuItem("\tSave\t\t");
         save.setOnAction(new EventHandler() {
             public void handle(Event t) {
@@ -130,16 +148,16 @@ public class MainWindow extends Application implements Runnable {
             }
         });
         menuFile.getItems().add(save);
-        
+
         MenuItem exit = new MenuItem("\tExit\t\t");
         exit.setOnAction(new EventHandler() {
             public void handle(Event t) {
                 doExit(t);
-                
+
             }
         });
         menuFile.getItems().add(exit);
-        
+
         Menu menuRun = new Menu("Run");
         MenuItem itemCompileThis = new MenuItem("Compile This Folder");
         itemCompileThis.setOnAction(new EventHandler() {
@@ -177,15 +195,15 @@ public class MainWindow extends Application implements Runnable {
                 // execute(selectedtab);
             }
         });
-        
+
         menuRun.getItems().addAll(itemCompileThis, itemCompileAll,
                 itemRunThis, itemRunAll, itemDiffThis, itemDiffAll);
-        
+
         menuBar.getMenus().addAll(menuFile, menuRun);
         //Setup Center and Right
         // TabPaneWrapper wrapper = new TabPaneWrapper(Orientation.HORIZONTAL, .9);
         centerTabPane = new TabPane();
-        
+
         this.stage.setTitle("ReLinux-IDE");
 
         //wrapper.addNodes(centerTabPane);
@@ -198,13 +216,13 @@ public class MainWindow extends Application implements Runnable {
         LeftSplitPane = new SplitPane();
         //VBox LeftVbox= new VBox(10);
         TabPane leftTabPane = new TabPane();
-        
+
         filesTab.setClosable(false);
         filesTab.setContent(new TextArea());
-        
+
         leftTabPane.getTabs().addAll(filesTab);
         TabPaneWrapper wrapperleft = new TabPaneWrapper(Orientation.HORIZONTAL, .1);
-        
+
         LeftSplitPane.getItems().add(leftTabPane);
         // LeftSplitPane.getItems().add(tree);
 
@@ -213,20 +231,19 @@ public class MainWindow extends Application implements Runnable {
             public void changed(ObservableValue<? extends Tab> tab, Tab oldTab, final Tab newTab) {
                 if (newTab.getText() == null) {
                     stage.setTitle("");
-                    
+
                 } else {
                     stage.setTitle("Marking Assisstant - " + GlobalValues.selectedParentFolder + " - " + newTab.getText());
                     selectedtab = Integer.parseInt(newTab.getId());
                     synchroniseUi();
-                    
-                  //  GlobalValues.selectedParentFolder = FilesTree.getProjectName(new File(newTab.getTooltip().getText()));
-                    
+
+                    //  GlobalValues.selectedParentFolder = FilesTree.getProjectName(new File(newTab.getTooltip().getText()));
                     if (GlobalValues.selectedParentFolder != null && (!GlobalValues.lastSelectedParentFolder.trim().equalsIgnoreCase(GlobalValues.selectedParentFolder.trim()))) {
                         //   loadManifest(new File("workspace/" + GlobalValues.selectedParentFolder));
                     }
-                    
+
                 }
-                
+
             }
         });
 //        FeedbackArea fba = new FeedbackArea();
@@ -270,7 +287,7 @@ public class MainWindow extends Application implements Runnable {
         statusBar = new HBox();
         statusBar.setSpacing(5);
         statusBar.maxHeight(10);
-        
+
         statusBar.setAlignment(Pos.CENTER_RIGHT);
         statusBar.getChildren().add(pi);
         // bp.setBottom(statusBar);
@@ -284,7 +301,7 @@ public class MainWindow extends Application implements Runnable {
         // rsplitpane.setDividerPositions(0.6);
         // wrapperRight.addNodes(rsplitpane);
         SplitPane bigTabPane = new SplitPane();
-        
+
         bigTabPane.getItems().add(LeftSplitPane);
         // bigTabPane.getItems().add(centerTabPane);
         bigTabPane.getItems().add(centerSplitPane);
@@ -300,124 +317,202 @@ public class MainWindow extends Application implements Runnable {
         this.stage.setX(100);
         this.stage.setY(100);
         this.stage.show();
-        
+
         ideStarted = true;
         this.stage.setOnCloseRequest(new EventHandler() {
             public void handle(Event t) {
                 doExit(t);
             }
         });
-        
+
         synchroniseUi();
     }
-    
+
     public void synchroniseUi() {
         Thread t = new Thread(new FilesTree(this));
         t.start();
-        
+
         Platform.runLater(new Runnable() {
-            
+
             @Override
             public void run() {
-                
+
                 filesTab.setContent(FilesTree.tv);
                 // filesTab.setContent(FilesTree.tv);
                 //           settings.outPrintln("" + Scanner.NetScanner.livehosts);
 
             }
         });
-        
+
     }
-    
-    public void doPrepare() {
-        
+
+    public void doNewSession() {
+
         synchroniseUi();
-        
+        final TextField sessionName = new TextField();
+        TextField compileNo = new TextField();
+        TextField runNo = new TextField();
+
         Stage newProjectDialog = new Stage();
-        newProjectDialog.setTitle("New Project");
+        newProjectDialog.setTitle("New Session");
         BorderPane borderPane = new BorderPane();
-        Label folderExist = new Label("Folder Already Exist!!");
-        folderExist.setTextFill(Paint.valueOf("Red"));
-        folderExist.setVisible(false);
-        final TextField projectName = new TextField();
-        projectName.textProperty().addListener((observable, oldValue, newValue) -> {
-            if (new File("workspace/" + newValue).exists()) {
-                folderExist.setText("Folder Already Exist!!");
-                folderExist.setVisible(true);
+        Label sessionExist = new Label("Session app/sessions/" + sessionName.getText() + ".json Already Exist!!");
+        sessionExist.setTextFill(Paint.valueOf("Red"));
+        sessionExist.setVisible(false);
+        sessionName.textProperty().addListener((observable, oldValue, newValue) -> {
+            if (new File("app/sessions/" + newValue + ".obj").exists()) {
+                sessionExist.setText("Folder Already Exist!!");
+                sessionExist.setVisible(true);
             } else {
-                folderExist.setVisible(false);
-                
+                sessionExist.setVisible(false);
+
             }
         });
-        ObservableList<String> parentOS = FXCollections.observableArrayList("Ubuntu");
-        parentOS.add("Debian");
-        parentOS.add("Fedora");
-        parentOS.add("Other");
-        ComboBox<String> combobox = new ComboBox((parentOS));
-        
-        ButtonBar buttonBar = new ButtonBar();
+
+        //ButtonBar buttonBar = new ButtonBar();
         Button okbutton = new Button("OK");
         Button cancelbutton = new Button("Cancel");
-        buttonBar.getButtons().addAll(okbutton, cancelbutton);
-        okbutton.setOnAction((ActionEvent event) -> {
-            boolean errorFree = true;
-            String project = projectName.getText().trim();
-            if (combobox.getValue() == null || combobox.getValue().trim().length() < 1) {
-                combobox.setEffect(new DropShadow(2, 0.1, 0.1, Color.RED));
-                errorFree = false;
-            }
-            
-            if (project.length() < 1) {
-                folderExist.setText("Set A Project Name!!");
-                errorFree = false;
-                
-            }
-            
-            if (errorFree) {
-                
-                newProjectDialog.close();
-            }
-            
-        });
-        cancelbutton.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-                newProjectDialog.close();
-            }
-        });
-        
+        //buttonBar.getButtons().addAll(okbutton, cancelbutton);
+
         GridPane grid = new GridPane();
         grid.setHgap(10);
         grid.setVgap(10);
         grid.setPadding(new Insets(0, 10, 0, 10));
-        
-        projectName.setPromptText("Project Name");
-        
-        grid.add(new Label("Project Name:"), 0, 0);
-        grid.add(projectName, 1, 0);
-        grid.add(folderExist, 2, 0);
-        grid.add(new Label("Parent OS:"), 0, 1);
-        grid.add(combobox, 1, 1);
+        ColumnConstraints column1 = new ColumnConstraints();
+        column1.setHalignment(HPos.RIGHT);
+        grid.getColumnConstraints().add(column1);
+        ColumnConstraints column2 = new ColumnConstraints();
+        column2.setHalignment(HPos.LEFT);
+        grid.getColumnConstraints().add(column2);
+
+        sessionName.setPromptText("Project Name");
+
+        grid.add(new Label("Session Name: app/sessions/"), 0, 0);
+        grid.add(sessionName, 1, 0);
+        grid.add(sessionExist, 2, 0);
+        grid.add(new Label("No of Question To Compile For:"), 0, 1);
+        grid.add(compileNo, 1, 1);
+
+        grid.add(new Label("No of Question To Run For:"), 0, 2);
+        grid.add(runNo, 1, 2);
+        grid.add(new Label("Feedback Template:"), 0, 3);
+        TextField templatePath = new TextField();
+        grid.add(templatePath, 1, 3);
+        Button browseFeedbackButton = new Button("Browse");
+        grid.add(browseFeedbackButton, 2, 3);
+        browseFeedbackButton.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                FileChooser jfc = new FileChooser();
+                jfc.setTitle("Choose Feedback template File");
+                GlobalValues.templateFile = jfc.showOpenDialog(stage);
+                templatePath.setText(GlobalValues.templateFile.getAbsolutePath());
+            }
+        });
+
+        grid.add(new Label("Use Remote Machine (ssh):"), 0, 4);
+        Label usernameLabel = new Label("Username:");
+        grid.add(usernameLabel, 0, 5);
+        Label passLabel = new Label("Password:");
+        grid.add(passLabel, 0, 6);
+        TextField usernameTF = new TextField();
+        usernameTF.setPromptText("user");
+        grid.add(usernameTF, 1, 5);
+        TextField passwdTF = new PasswordField();
+        grid.add(passwdTF, 1, 6);
+
+        CheckBox enableRemoteCB = new CheckBox();
+        usernameLabel.setDisable(true);
+        usernameTF.setDisable(true);
+        passLabel.setDisable(true);
+        passwdTF.setDisable(true);
+
+        enableRemoteCB.selectedProperty().addListener(new ChangeListener<Boolean>() {
+            public void changed(ObservableValue<? extends Boolean> ov,
+                    Boolean old_val, Boolean new_val) {
+                usernameLabel.setDisable(!new_val);
+                usernameTF.setDisable(!new_val);
+                passLabel.setDisable(!new_val);
+                passwdTF.setDisable(!new_val);
+            }
+        });
+        grid.add(enableRemoteCB, 1, 4);
+
+        grid.add(okbutton, 0, 7);
+        grid.add(cancelbutton, 1, 7);
+        GridPane.setHgrow(okbutton, Priority.ALWAYS);
         borderPane.setCenter(grid);
-        borderPane.setBottom(buttonBar);
+
+        okbutton.setOnAction((ActionEvent event) -> {
+            boolean errorFree = true;
+            String project = sessionName.getText().trim();
+
+            if (project.length() < 1) {
+                sessionExist.setText("Set A Session Name!!");
+                errorFree = false;
+
+            }
+            newProjectDialog.hide();
+            GlobalValues.compilerSettingsList.clear();
+            GlobalValues.runSettingsList.clear();
+            int runNum = Integer.parseInt(runNo.getText().trim());
+            int comNum = Integer.parseInt(compileNo.getText().trim());
+            for (int i = 1; i <= comNum; i++) {
+                CompilerSetupWindow csw = new CompilerSetupWindow(i);
+                try {
+                    csw.start(new Stage());
+                } catch (Exception ex) {
+                    Logger.getLogger(MainWindow.class.getName()).log(Level.SEVERE, null, ex);
+                }
+
+            }
+
+            for (int i = 1; i <= runNum; i++) {
+                ExecuteSetupWindow csw = new ExecuteSetupWindow(i);
+                try {
+                    csw.start(new Stage());
+                } catch (Exception ex) {
+                    Logger.getLogger(MainWindow.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+
+            GlobalValues.sessionSettings = new SessionSettings(sessionName.getText(),
+                    "", "", comNum, runNum, GlobalValues.compilerSettingsList, GlobalValues.runSettingsList, templatePath.getText().trim());
+            Tools.parseFeedbackTemplate();
+            Tools.writeObject(("app/sessions/" + sessionName.getText() + ".obj"), GlobalValues.sessionSettings);
+            newProjectDialog.close();
+            event.consume();
+        });
+        cancelbutton.setOnAction((ActionEvent event) -> {
+            newProjectDialog.close();
+            event.consume();
+        });
+
         borderPane.setPadding(new Insets(10, 10, 10, 10));
         newProjectDialog.setScene(new Scene(borderPane));
         newProjectDialog.initOwner(stage);
         newProjectDialog.show();
-        
+
     }
-    
-    public void openProject() {
-        
+
+    public void doContinueSession() {
         synchroniseUi();
-        
+        FileChooser jfc = new FileChooser();
+        jfc.setTitle("Select Session File");
+        File choice = jfc.showOpenDialog(stage);
+        GlobalValues.sessionSettings = (SessionSettings) Tools.readObject(choice.getAbsolutePath());
+        try {
+            GlobalValues.feedbackDBobject = new JSONObject(Tools.read((new File("FEEDBACK/" + GlobalValues.sessionSettings.getSession_name() + "-feedback-db.fdb"))));
+            GlobalValues.feedbackDBArray = GlobalValues.feedbackDBobject.getJSONArray("DB");
+        } catch (IOException ex) {
+            Logger.getLogger(MainWindow.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
     }
-    
-   
-    
+
     private void doExit(Event e) {
         e.consume();
-        
+
         Dialog dialog = new Alert(Alert.AlertType.WARNING, "Do you want to exit ??", ButtonType.YES, ButtonType.NO);
         dialog.initOwner(stage);
         dialog.showAndWait()
@@ -425,9 +520,9 @@ public class MainWindow extends Application implements Runnable {
             stage.close();
             System.exit(0);
         });
-        
+
     }
-    
+
     private boolean doSave() {
         File file2 = new File(textTab[selectedtab].getTooltip().getText());
         if (file2.exists()) {
@@ -502,7 +597,7 @@ public class MainWindow extends Application implements Runnable {
     public static void IncrementTabcounter() {
         tabcounter++;
     }
-    
+
     public static void main(String[] args) {
         try {
             // Set System L&F
@@ -517,10 +612,10 @@ public class MainWindow extends Application implements Runnable {
         } catch (IllegalAccessException e) {
             // handle exception
         }
-        
+
         MainWindow.launch(args);
     }
-    
+
     void executeScript(String ScriptLocation, String... args) {
         Thread thread = new Thread(new Runnable() {
             @Override
@@ -533,12 +628,12 @@ public class MainWindow extends Application implements Runnable {
                     ProcessBuilder pb = new ProcessBuilder(commands);
                     Process p = pb.start();
                     BufferedReader stdInput = new BufferedReader(new InputStreamReader(p.getInputStream()));
-                    
+
                     BufferedReader stdError = new BufferedReader(new InputStreamReader(p.getErrorStream()));
 
                     // read the output from the command
                     System.out.println("Here is the standard output of the command:\n");
-                    
+
                     String s = null;
                     while ((s = stdInput.readLine()) != null) {
                         final String fout = "\n" + s;
@@ -564,7 +659,7 @@ public class MainWindow extends Application implements Runnable {
                     stdError.close();
                     stdInput.close();
                     p.destroy();
-                    
+
                 } catch (IOException ex) {
                     Logger.getLogger(MainWindow.class.getName()).log(Level.SEVERE, null, ex);
                 }
@@ -572,20 +667,20 @@ public class MainWindow extends Application implements Runnable {
         });
         thread.start();
     }
-    
+
     @Override
     public void run() {
         try {
-            
+
         } catch (Exception ex) {
             Logger.getLogger(MainWindow.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
-    
+
     public static class TabPaneWrapper {
-        
+
         SplitPane split;
-        
+
         public TabPaneWrapper(Orientation o, double splitLocation) {
             split = new SplitPane();
 
@@ -594,22 +689,22 @@ public class MainWindow extends Application implements Runnable {
             split.setOrientation(o);
             split.setDividerPosition(0, splitLocation);
         }
-        
+
         public void addNodes(final Node node1, final Node node2) {
             //Add to the split pane
             split.getItems().addAll(node1, node2);
         }
-        
+
         public void addNodes(final Node node1) {
             //Add to the split pane
             split.getItems().add(node1);
         }
-        
+
         public Parent getNode() {
             // split.setResizableWithParent(split, Boolean.TRUE);
             return split;
         }
-        
+
     }
-    
+
 }

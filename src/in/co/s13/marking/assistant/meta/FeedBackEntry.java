@@ -8,6 +8,7 @@ package in.co.s13.marking.assistant.meta;
 import java.io.Serializable;
 import java.util.Objects;
 import javafx.scene.paint.Color;
+import org.json.JSONObject;
 
 /**
  *
@@ -126,15 +127,15 @@ public class FeedBackEntry implements Serializable {
         double ratio = this.obtainedMarks / (this.maximumMarks - minimumMarks);
         if (ratio > .8) {
             return Color.DARKGREEN;
-        }else if (ratio <= .8 && ratio >.6) {
+        } else if (ratio <= .8 && ratio > .6) {
             return Color.GREEN;
-        }else if (ratio <= .6 && ratio >.4) {
+        } else if (ratio <= .6 && ratio > .4) {
             return Color.YELLOWGREEN;
-        }else if (ratio <= .4 && ratio >.2) {
+        } else if (ratio <= .4 && ratio > .2) {
             return Color.ORANGE;
-        }else{
+        } else {
             return Color.RED;
-        
+
         }
 
     }
@@ -180,6 +181,29 @@ public class FeedBackEntry implements Serializable {
         }
         sb.append("[" + "").append(obtainedMarks).append("/").append(maximumMarks).append("]" + " ").append(feedBack);
         return sb.toString();
+    }
+
+    public JSONObject toJSON() {
+        JSONObject obj = new JSONObject();
+
+        obj.put("id", id);
+        obj.put("minm", minimumMarks);
+        obj.put("maxm", maximumMarks);
+        obj.put("obtm", obtainedMarks);
+        obj.put("type", type);
+        obj.put("clonable", duplicateAllowed);
+        obj.put("feedBack", feedBack);
+        return obj;
+    }
+
+    public FeedBackEntry(JSONObject obj) {
+        id = obj.getInt("id");
+        minimumMarks = obj.getDouble("minm");
+        maximumMarks = obj.getDouble("maxm");
+        obtainedMarks = obj.getDouble("obtm");
+        type = EntryType.valueOf(obj.getString("type"));
+        duplicateAllowed = obj.getBoolean("clonable");
+        feedBack = obj.getString("feedBack");
     }
 
 }

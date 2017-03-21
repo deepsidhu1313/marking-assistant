@@ -371,6 +371,7 @@ public class FeedbackArea {
         grid.add(typCB, 1, 5);
 
         Button addButton = new Button("Add");
+
         Button clearButton = new Button("Clear");
         grid.add(addButton, 0, 6);
         grid.add(clearButton, 1, 6);

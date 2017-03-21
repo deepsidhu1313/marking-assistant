@@ -26,7 +26,13 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import static in.co.s13.marking.assistant.meta.GlobalValues.OS;
 import static in.co.s13.marking.assistant.meta.GlobalValues.dirsInAssignmentFolder;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.Collections;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 /**
  *
@@ -34,14 +40,14 @@ import java.util.Collections;
  */
 public class Tools {
 
-     public static String read(File f) throws IOException {
+    public static String read(File f) throws IOException {
         String content = "";
         if (!f.exists()) {
             return "";
         }
         FileInputStream fstream = new FileInputStream(f);
         BufferedReader br = new BufferedReader(new InputStreamReader(fstream));
-        
+
         String strLine;
 
 //Read File Line By Line
@@ -56,6 +62,7 @@ public class Tools {
         br.close();
         return content;
     }
+
     public static void write(File f, String text) {
         try (FileWriter fw = new FileWriter(f);
                 PrintWriter pw = new PrintWriter(fw)) {
@@ -66,6 +73,28 @@ public class Tools {
             Logger.getLogger(Tools.class.getName()).log(Level.SEVERE, null, ex);
         }
 
+    }
+
+    public static void writeObject(String path, Object obj) {
+        try (FileOutputStream fos = new FileOutputStream(path); GZIPOutputStream gos = new GZIPOutputStream(fos); ObjectOutputStream oos = new ObjectOutputStream(gos)) {
+            oos.writeObject(obj);
+            oos.flush();
+        } catch (IOException ex) {
+            Logger.getLogger(Tools.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    public static Object readObject(String path) {
+        Object obj = null;
+        try (FileInputStream fin = new FileInputStream(path); GZIPInputStream gis = new GZIPInputStream(fin); ObjectInputStream ois = new ObjectInputStream(gis)) {
+            obj = ois.readObject();
+            ois.close();
+        } catch (IOException ex) {
+            Logger.getLogger(Tools.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (ClassNotFoundException ex) {
+            Logger.getLogger(Tools.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return obj;
     }
 
     /**
@@ -575,6 +604,48 @@ public class Tools {
         }
         Collections.sort(dirsInAssignmentFolder);
         return dirsInAssignmentFolder;
+    }
+
+    public static void parseFeedbackTemplate() {
+        try {
+            GlobalValues.feedbackDBArray = new JSONArray();
+            String templateContent = read(GlobalValues.templateFile);
+            FeedBackEntry endSection = new FeedBackEntry(0, 0, 0, 0, "Section End", true, FeedBackEntry.EntryType.SECTION_END, 0);
+
+            String lines[] = templateContent.split("\n");
+            for (int i = 0; i < lines.length; i++) {
+                String line = lines[i];
+                if (line.length() > 0) {
+                    if (line.contains("[")) {
+                        String marksString = line.substring(line.indexOf("[") + 1, line.indexOf("]"));
+                        String commentString = line.substring(line.indexOf("]") + 1).trim();
+                        double maxm = 0;
+                        double minm = Double.MIN_VALUE;
+                        if (marksString.contains("/")) {
+                            String marks[] = marksString.split("/");
+                            if (marks.length == 2) {
+                                minm = Double.parseDouble(marks[0].trim());
+                                maxm = Double.parseDouble(marks[1].trim());
+                            } else if (marks.length == 1) {
+                                maxm = Double.parseDouble(marks[0].trim());
+
+                            }
+                        } else {
+                            maxm = Double.parseDouble(marksString.trim());
+
+                        }
+                        FeedBackEntry fbe = new FeedBackEntry(i, maxm, minm, 0, commentString, true, FeedBackEntry.EntryType.SECTION_START, 0);
+                        GlobalValues.feedbackDBArray.put(fbe.toJSON());
+                    }
+                }
+            }
+            GlobalValues.feedbackDBobject = new JSONObject();
+            GlobalValues.feedbackDBobject.put("DB", GlobalValues.feedbackDBArray);
+            write(new File("FEEDBACK/" + GlobalValues.sessionSettings.getSession_name() + "-feedback-db.fdb"), GlobalValues.feedbackDBobject.toString(4));
+
+        } catch (IOException ex) {
+            Logger.getLogger(Tools.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
 }
