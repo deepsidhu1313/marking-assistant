@@ -8,6 +8,7 @@ package in.co.s13.marking.assistant.ui;
 import in.co.s13.marking.assistant.meta.CompilerSetting;
 import in.co.s13.marking.assistant.meta.FeedBackEntry;
 import in.co.s13.marking.assistant.meta.GlobalValues;
+import static in.co.s13.marking.assistant.meta.GlobalValues.showFeedBackInSeprateWindow;
 import in.co.s13.marking.assistant.meta.RunSetting;
 import in.co.s13.marking.assistant.meta.SessionSettings;
 import in.co.s13.marking.assistant.meta.Tools;
@@ -75,8 +76,10 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import javafx.geometry.HPos;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.Tooltip;
 import javafx.scene.input.KeyCode;
@@ -103,19 +106,21 @@ public class MainWindow extends Application implements Runnable {
     public static Tab tab21, tab22, tab23, tab24;
     static Tab filesTab = new Tab("Files");
     static TabPane centerTabPane;
-    public static Tab textTab[] = new Tab[100];
+    public static Tab selectedTab ;//= new Tab[100];
     public static ProgressIndicator pi = new ProgressBar();
 
     // public static TreeView tree = new TreeView();
     //public static CheckBoxTreeItem[] root = new CheckBoxTreeItem[1000];
     public static boolean ideStarted = false;
-    public static int tabcounter = 0;
+    public static AtomicInteger tabcounter = new AtomicInteger(0);
     public static BorderPane bp;
     public static HBox statusBar;
 
     Stage stage = new Stage();
+    private static Stage feedBackStage = new Stage();
+
     public static SplitPane LeftSplitPane;
-    public static int selectedtab = 0;
+    //public static int selectedtab = 0;
     public static TextArea consoleArea = new TextArea();
     public static TabPane bottomTabPane;
     public static TextArea logArea = new TextArea();
@@ -191,6 +196,17 @@ public class MainWindow extends Application implements Runnable {
             }
         });
         menuFile.getItems().add(exit);
+
+        Menu menuView = new Menu("View");
+        CheckMenuItem showFeedBackInSeprateWindowMenuItem = new CheckMenuItem("Show Feedback In Seprate Window");
+        showFeedBackInSeprateWindowMenuItem.setSelected(showFeedBackInSeprateWindow);
+        showFeedBackInSeprateWindowMenuItem.selectedProperty().addListener(new ChangeListener<Boolean>() {
+            @Override
+            public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+                showFeedBackInSeprateWindow = newValue;
+            }
+        });
+        menuView.getItems().add(showFeedBackInSeprateWindowMenuItem);
         Menu menuFix = new Menu("Fix");
         MenuItem fixName = new MenuItem("Fix Names");
         fixName.setOnAction((ActionEvent event) -> {
@@ -251,7 +267,7 @@ public class MainWindow extends Application implements Runnable {
         menuRun.getItems().addAll(itemCompileThis, itemCompileAll,
                 itemRunThis, itemRunAll, itemDiffThis, itemDiffAll);
 
-        menuBar.getMenus().addAll(menuFile, menuFix, menuRun);
+        menuBar.getMenus().addAll(menuFile, menuView, menuFix, menuRun);
         //Setup Center and Right
         // TabPaneWrapper wrapper = new TabPaneWrapper(Orientation.HORIZONTAL, .9);
         centerTabPane = new TabPane();
@@ -282,12 +298,13 @@ public class MainWindow extends Application implements Runnable {
             @Override
             public void changed(ObservableValue<? extends Tab> tab, Tab oldTab, final Tab newTab) {
                 if (newTab != null) {
+                    selectedTab=newTab;
                     if (newTab.getText() == null) {
                         stage.setTitle("");
 
                     } else {
                         stage.setTitle("Marking Assisstant - " + GlobalValues.sessionSettings.getCurrentStudent() + " - " + newTab.getText());
-                        selectedtab = Integer.parseInt(newTab.getId());
+                        //selectedtab = Integer.parseInt(newTab.getId());
                         synchroniseUi();
 
                         //  GlobalValues.selectedParentFolder = FilesTree.getProjectName(new File(newTab.getTooltip().getText()));
@@ -416,6 +433,19 @@ public class MainWindow extends Application implements Runnable {
         s.showAndWait();
     }
 
+    private static void addToFeedBackWindow(FeedbackArea fba) {
+        feedBackStage.setTitle("Feedback of " + fba.getFeedBackFile().getParentFile().getName() + " - " + fba.getFeedBackFile().getAbsolutePath());
+        feedBackStage.setScene(new Scene((fba)));
+        feedBackStage.hide();
+        if (!feedBackStage.isShowing()) {
+            feedBackStage.show();
+        }
+
+        if (!feedBackStage.isFocused()) {
+            feedBackStage.setFocused(true);
+        }
+    }
+
     public void synchroniseUi() {
         Thread t = new Thread(new FilesTree(this));
         t.start();
@@ -436,14 +466,14 @@ public class MainWindow extends Application implements Runnable {
 
     void doPreviousStudent() {
         doSaveAll();
-        centerTabPane.getTabs().clear();
+        closeAllTabs();
         ArrayList<File> students = Tools.getDirsInAssignmentDir();
         for (int i = 0; i < students.size(); i++) {
             File get = students.get(i);
             System.out.println("Comparing:" + GlobalValues.sessionSettings.getCurrentStudent() + " with " + get.getName());
             if (GlobalValues.sessionSettings.getCurrentStudent().equalsIgnoreCase(get.getName()) && i > 0) {
                 GlobalValues.sessionSettings.setLastStudentMarked(get.getName());
-                
+
                 openFilesForStudent(students.get(i - 1));
 
                 break;
@@ -453,7 +483,7 @@ public class MainWindow extends Application implements Runnable {
 
     void doNextStudent() {
         doSaveAll();
-        centerTabPane.getTabs().clear();
+        closeAllTabs();
         ArrayList<File> students = Tools.getDirsInAssignmentDir();
         for (int i = 0; i < students.size(); i++) {
             File get = students.get(i);
@@ -467,6 +497,11 @@ public class MainWindow extends Application implements Runnable {
         }
     }
 
+    void closeAllTabs() {
+        centerTabPane.getTabs().clear();
+        GlobalValues.listOpenedFiles.clear();
+    }
+
     void openFilesForStudent(File get) {
         File files[] = get.listFiles();
         for (int i = 0; i < files.length; i++) {
@@ -475,7 +510,7 @@ public class MainWindow extends Application implements Runnable {
                 if (!file.getName().endsWith(".class")) {
                     try {
                         if (Tools.read(file).length() > 1) {
-                            addTab(file, tabcounter);
+                            addTab(file, tabcounter.get());
                         }
                     } catch (IOException ex) {
                         Logger.getLogger(MainWindow.class.getName()).log(Level.SEVERE, null, ex);
@@ -484,7 +519,7 @@ public class MainWindow extends Application implements Runnable {
             }
         }
         if (!Arrays.asList(files).contains(new File(get.getAbsolutePath() + "/feedback"))) {
-            addTab(new File(get.getAbsolutePath() + "/feedback"), tabcounter);
+            addTab(new File(get.getAbsolutePath() + "/feedback"), tabcounter.get());
         }
         GlobalValues.sessionSettings.setCurrentStudent(get.getName());
 
@@ -669,6 +704,7 @@ public class MainWindow extends Application implements Runnable {
             }
 
         }
+        //Tools.parseFeedbackTemplate();
         openFilesForStudent(new File("ASSIGNMENTS/" + GlobalValues.sessionSettings.getCurrentStudent()));
 
     }
@@ -684,7 +720,7 @@ public class MainWindow extends Application implements Runnable {
 
     private void doExit(Event e) {
         e.consume();
-
+        Tools.saveSettings();
         Dialog dialog = new Alert(Alert.AlertType.WARNING, "Do you want to exit ??", ButtonType.YES, ButtonType.NO);
         dialog.initOwner(stage);
         dialog.showAndWait()
@@ -697,20 +733,28 @@ public class MainWindow extends Application implements Runnable {
 
     private boolean doSave() {
         Tools.writeObject(("app/sessions/" + GlobalValues.sessionSettings.getSession_name() + ".obj"), GlobalValues.sessionSettings);
-        File file2 = new File(textTab[selectedtab].getTooltip().getText());
+        File file2 = new File(selectedTab.getTooltip().getText());
         if (file2.exists()) {
             file2.delete();
         }
-        Node contentNode = textTab[selectedtab].getContent();
+        Node contentNode = selectedTab.getContent();
         if (contentNode instanceof SyntaxTextAreaFX) {
             ((SyntaxTextAreaFX) contentNode).save();
         } else if (contentNode instanceof FeedbackArea) {
             ((FeedbackArea) contentNode).save();
 
         }
+
+        if (showFeedBackInSeprateWindow) {
+            Parent root = feedBackStage.getScene().getRoot();
+            if(root instanceof FeedbackArea){
+            ((FeedbackArea) root).save();
+  
+            }
+        }
 //        PrintStream out = null;
 //        try {
-//            out = new PrintStream(textTab[selectedtab].getTooltip().getText()); //new AppendFileStream
+//            out = new PrintStream(selectedTab[selectedtab].getTooltip().getText()); //new AppendFileStream
 //        } catch (FileNotFoundException ex) {
 //            Logger.getLogger(MainWindow.class.getName()).log(Level.SEVERE, null, ex);
 //        }
@@ -730,6 +774,14 @@ public class MainWindow extends Application implements Runnable {
             } else if (contentNode instanceof FeedbackArea) {
                 ((FeedbackArea) contentNode).save();
 
+            }
+        }
+        
+        if (showFeedBackInSeprateWindow) {
+            Parent root = feedBackStage.getScene().getRoot();
+            if(root instanceof FeedbackArea){
+            ((FeedbackArea) root).save();
+  
             }
         }
     }
@@ -994,27 +1046,28 @@ public class MainWindow extends Application implements Runnable {
 
     public void showLogArea() {
 
-        st.setTitle("Log");
-        st.setScene(new Scene(new BorderPane(logArea)));
-        st.show();
+//        st.setTitle("Log");
+//        st.setScene(new Scene(new BorderPane(logArea)));
+//        st.show();
     }
 
     public static void appendLogToLogArea(String Text) {
-        Platform.runLater(new Runnable() {
-            @Override
-            public void run() {
-                logArea.appendText(Text);
-            }
-        });
+//        Platform.runLater(new Runnable() {
+//            @Override
+//            public void run() {
+//                logArea.appendText(Text);
+//            }
+//        });
 
     }
 
-    public static void addTab(File selectedFile, int tabcounter) {
+    public static synchronized void addTab(File selectedFile, int tabcounter) {
+
         if (!GlobalValues.listOpenedFiles.isEmpty() && GlobalValues.listOpenedFiles.contains(selectedFile.getAbsolutePath())) {
             ObservableList<Tab> templs = centerTabPane.getTabs();
-            System.out.println("" + templs);
+//            System.out.println("" + templs);
             for (int i = 0; i < templs.size(); i++) {
-                System.out.println("" + templs.get(i).getTooltip());
+//                System.out.println("" + templs.get(i).getTooltip());
                 if ((templs.get(i).getTooltip() != null) && templs.get(i).getTooltip().getText().equalsIgnoreCase(selectedFile.getAbsolutePath())) {
                     final int r = i;
                     Platform.runLater(() -> {
@@ -1023,11 +1076,11 @@ public class MainWindow extends Application implements Runnable {
                 }
             }
         } else {
-            textTab[tabcounter] = new Tab(selectedFile.getName());
+           Tab newTab = new Tab(selectedFile.getName());
 
-            textTab[tabcounter].setId("" + tabcounter);
-            textTab[tabcounter].setTooltip(new Tooltip(selectedFile.getAbsolutePath()));
-            textTab[tabcounter].setOnClosed((Event e) -> {
+            newTab.setId("" + tabcounter);
+            newTab.setTooltip(new Tooltip(selectedFile.getAbsolutePath()));
+            newTab.setOnClosed((Event e) -> {
                 GlobalValues.listOpenedFiles.clear();
                 ObservableList<Tab> tl = centerTabPane.getTabs();
                 tl.stream().forEach((tl1) -> {
@@ -1037,7 +1090,14 @@ public class MainWindow extends Application implements Runnable {
             GlobalValues.listOpenedFiles.add(selectedFile.getAbsolutePath().trim());
             if (selectedFile.getName().equalsIgnoreCase("feedback")) {
                 FeedbackArea fba = new FeedbackArea(selectedFile.getAbsolutePath());
-                textTab[tabcounter].setContent(fba.getNode());
+
+                if (showFeedBackInSeprateWindow) {
+                    addToFeedBackWindow(fba);
+                } else {
+                    newTab.setContent(fba.getNode());
+                    centerTabPane.getTabs().add(newTab);
+                }
+
             } else {
                 System.out.println("Adding Tab: " + selectedFile.getAbsolutePath());
                 SyntaxTextAreaFX ta = new SyntaxTextAreaFX(selectedFile.getAbsolutePath());
@@ -1048,15 +1108,18 @@ public class MainWindow extends Application implements Runnable {
                     Logger.getLogger(MainWindow.class.getName()).log(Level.SEVERE, null, ex);
                 }
 
-                textTab[tabcounter].setContent(ta.getNode());
+                newTab.setContent(ta.getNode());
+                centerTabPane.getTabs().add(newTab);
             }
-            centerTabPane.getTabs().add(textTab[tabcounter]);
+
             IncrementTabcounter();
         }
+//   
+
     }
 
-    public static void IncrementTabcounter() {
-        tabcounter++;
+    public static synchronized void IncrementTabcounter() {
+        tabcounter.incrementAndGet();
     }
 
     public static void main(String[] args) {
@@ -1075,58 +1138,6 @@ public class MainWindow extends Application implements Runnable {
         }
 
         MainWindow.launch(args);
-    }
-
-    void executeScript(String ScriptLocation, String... args) {
-        Thread thread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    ArrayList<String> commands = new ArrayList<String>();
-                    commands.add("/bin/bash");
-                    commands.add(ScriptLocation);
-                    commands.addAll(Arrays.asList(args));
-                    ProcessBuilder pb = new ProcessBuilder(commands);
-                    Process p = pb.start();
-                    BufferedReader stdInput = new BufferedReader(new InputStreamReader(p.getInputStream()));
-
-                    BufferedReader stdError = new BufferedReader(new InputStreamReader(p.getErrorStream()));
-
-                    // read the output from the command
-                    System.out.println("Here is the standard output of the command:\n");
-
-                    String s = null;
-                    while ((s = stdInput.readLine()) != null) {
-                        final String fout = "\n" + s;
-                        Platform.runLater(new Runnable() {
-                            @Override
-                            public void run() {
-                                consoleArea.appendText(fout);
-                            }
-                        });
-                    }
-
-                    // read any errors from the attempted command
-                    System.out.println("Here is the standard error of the command (if any):\n");
-                    while ((s = stdError.readLine()) != null) {
-                        final String fout = "\n" + s;
-                        Platform.runLater(new Runnable() {
-                            @Override
-                            public void run() {
-                                consoleArea.appendText(fout);
-                            }
-                        });
-                    }
-                    stdError.close();
-                    stdInput.close();
-                    p.destroy();
-
-                } catch (IOException ex) {
-                    Logger.getLogger(MainWindow.class.getName()).log(Level.SEVERE, null, ex);
-                }
-            }
-        });
-        thread.start();
     }
 
     @Override

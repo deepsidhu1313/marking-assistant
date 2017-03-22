@@ -30,5 +30,6 @@ public class GlobalValues {
     public static ArrayList<FeedBackEntry> templateFeedback = new ArrayList<>();
     public static ArrayList<String> listOpenedFiles = new ArrayList<>();
     public static DataFormat datFormat = new DataFormat("feedback/entry");
-
+    public static SettingsEntry settings = new SettingsEntry();
+    public static boolean showFeedBackInSeprateWindow = false;
 }

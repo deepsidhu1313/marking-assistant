@@ -33,9 +33,11 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.SelectionMode;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.DataFormat;
@@ -70,6 +72,7 @@ public class FeedbackArea extends BorderPane {
     private SyntaxTextAreaFX synTA;
     private File feedBackFile;
     ListView<FeedBackEntry> feedbackStu = new ListView<>();
+    int lastFocused = 0;
 
     public FeedbackArea(String pathToFeedbackFile) {
         feedBackFile = new File(pathToFeedbackFile);
@@ -85,6 +88,11 @@ public class FeedbackArea extends BorderPane {
         studentLabel.setAlignment(Pos.CENTER);
 
         studentVBox.getChildren().addAll(studentLabel, feedbackStu);
+        feedbackStu.focusedProperty().addListener((ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) -> {
+            if (newValue) {
+                lastFocused = 1;
+            }
+        });
         feedbackStu.setCellFactory(lv -> {
             ListCell<FeedBackEntry> cell = new ListCell<FeedBackEntry>() {
                 @Override
@@ -283,6 +291,14 @@ public class FeedbackArea extends BorderPane {
         templateLabel.setPadding(new Insets(5, 10, 0, 10));
         templateLabel.setAlignment(Pos.CENTER);
         ListView<FeedBackEntry> feedbackDB = new ListView<>();
+        feedbackDB.focusedProperty().addListener(new ChangeListener<Boolean>() {
+            @Override
+            public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+                if (newValue) {
+                    lastFocused = 2;
+                }
+            }
+        });
         feedbackDB.setCellFactory(lv -> {
             ListCell<FeedBackEntry> cell = new ListCell<FeedBackEntry>() {
                 @Override
@@ -333,6 +349,8 @@ public class FeedbackArea extends BorderPane {
             return cell;
         });
         feedbackDB.getItems().addAll(GlobalValues.feedbackDBArray);
+        feedbackDB.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+
         GridPane grid = new GridPane();
         grid.setAlignment(Pos.CENTER);
         grid.setHgap(10);
@@ -340,6 +358,8 @@ public class FeedbackArea extends BorderPane {
 
         ColumnConstraints column1 = new ColumnConstraints();
         column1.setHalignment(HPos.RIGHT);
+        column1.setHgrow(Priority.ALWAYS);
+        column1.setMinWidth(GridPane.USE_PREF_SIZE);
         grid.getColumnConstraints().add(column1);
 
         ColumnConstraints column2 = new ColumnConstraints();
@@ -367,7 +387,7 @@ public class FeedbackArea extends BorderPane {
         grid.add(obtMTF, 1, 2);
 
         Label feedComLabel = new Label("Feedback Comment");
-        TextField feedCommTF = new TextField();
+        TextArea feedCommTF = new TextArea();
         grid.add(feedComLabel, 0, 03);
         grid.add(feedCommTF, 1, 3);
 
@@ -391,6 +411,8 @@ public class FeedbackArea extends BorderPane {
         Button clearButton = new Button("Clear");
         grid.add(addButton, 0, 6);
         grid.add(clearButton, 1, 6);
+        Button updateButton = new Button("Update");
+        grid.add(updateButton, 0, 7);
 
         clearButton.setOnAction(new EventHandler<ActionEvent>() {
             @Override
@@ -413,7 +435,43 @@ public class FeedbackArea extends BorderPane {
                 boolean val = dupCB.getSelectionModel().getSelectedItem();
                 FeedBackEntry.EntryType et = typCB.getSelectionModel().getSelectedItem();
                 String feedBack = feedCommTF.getText();
-                GlobalValues.feedbackDBArray.add(new FeedBackEntry(itemEnter, maxm, minm, obtm, feedBack, val, et, itemEnter));
+                GlobalValues.feedbackDBArray.add(new FeedBackEntry(itemEnter, maxm, minm, obtm, feedBack, val, et, 0));
+                feedbackDB.getItems().clear();
+                feedbackDB.getItems().addAll(GlobalValues.feedbackDBArray);
+                feedbackDB.getSelectionModel().select(feedbackDB.getItems().size()-1);
+                maxMTF.setText("");
+                minMTF.setText("");
+                obtMTF.setText("" + Double.MIN_VALUE);
+                feedCommTF.setText("");
+                dupCB.getSelectionModel().selectFirst();
+                typCB.getSelectionModel().selectFirst();
+                save();
+            }
+        });
+
+        updateButton.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                double maxm = Double.parseDouble(maxMTF.getText());
+                double minm = Double.parseDouble(minMTF.getText());
+                double obtm = Double.parseDouble(obtMTF.getText());
+                boolean val = dupCB.getSelectionModel().getSelectedItem();
+                FeedBackEntry.EntryType et = typCB.getSelectionModel().getSelectedItem();
+                String feedBack = feedCommTF.getText();
+                FeedBackEntry fbe = feedbackDB.getSelectionModel().getSelectedItem();
+                fbe.setMaximumMarks(maxm);
+                fbe.setMinimumMarks(minm);
+                fbe.setObtainedMarks(obtm);
+                fbe.setDuplicateAllowed(val);
+                fbe.setType(et);
+                fbe.setFeedBack(feedBack);
+
+                maxMTF.setText("");
+                minMTF.setText("");
+                obtMTF.setText("" + Double.MIN_VALUE);
+                feedCommTF.setText("");
+                dupCB.getSelectionModel().selectFirst();
+                typCB.getSelectionModel().selectFirst();
                 save();
             }
         });
@@ -441,6 +499,7 @@ public class FeedbackArea extends BorderPane {
         VBox.setVgrow(feedbackStu, Priority.ALWAYS);
 
         GridPane altButtonGP = new GridPane();
+
         Button addAltButton = new Button("Add");
         Button remAltButton = new Button("Remove");
         Button upAltButton = new Button("Move Up");
@@ -450,7 +509,14 @@ public class FeedbackArea extends BorderPane {
         addAltButton.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
-                feedbackStu.getItems().add(feedbackStu.getSelectionModel().getSelectedIndex(), new FeedBackEntry(feedbackStu.getItems().size(), feedbackDB.getSelectionModel().getSelectedItem()));
+
+                List<FeedBackEntry> selectedItems = feedbackDB.getSelectionModel().getSelectedItems();
+                for (int i = 0; i < selectedItems.size(); i++) {
+                    FeedBackEntry get = selectedItems.get(i);
+                    feedbackStu.getItems().add(feedbackStu.getSelectionModel().getSelectedIndex() + i, new FeedBackEntry(feedbackStu.getItems().size(), get));
+
+                }
+                //feedbackStu.getItems().add(feedbackStu.getSelectionModel().getSelectedIndex(), new FeedBackEntry(feedbackStu.getItems().size(), feedbackDB.getSelectionModel().getSelectedItem()));
 
             }
         });
@@ -458,10 +524,10 @@ public class FeedbackArea extends BorderPane {
         remAltButton.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
-                if (feedbackStu.isFocused()) {
+                if (lastFocused == 1) {
                     feedbackStu.getItems().remove(feedbackStu.getSelectionModel().getSelectedIndex());
                 }
-                if (feedbackDB.isFocused()) {
+                if (lastFocused == 2) {
                     feedbackDB.getItems().remove(feedbackDB.getSelectionModel().getSelectedIndex());
                 }
 
@@ -471,7 +537,7 @@ public class FeedbackArea extends BorderPane {
         upAltButton.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
-                if (feedbackStu.isFocused()) {
+                if (lastFocused == 1) {
                     int itemno = feedbackStu.getSelectionModel().getSelectedIndex();
                     if (itemno > 0) {
                         FeedBackEntry fb = feedbackStu.getItems().get(itemno);
@@ -480,7 +546,7 @@ public class FeedbackArea extends BorderPane {
                         feedbackStu.getSelectionModel().select(itemno - 1);
                     }
                 }
-                if (feedbackDB.isFocused()) {
+                if (lastFocused == 2) {
                     int itemno = feedbackDB.getSelectionModel().getSelectedIndex();
                     if (itemno > 0) {
                         FeedBackEntry fb = feedbackDB.getItems().get(itemno);
@@ -496,7 +562,7 @@ public class FeedbackArea extends BorderPane {
         downAltButton.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
-                if (feedbackStu.isFocused()) {
+                if (lastFocused == 1) {
                     int itemno = feedbackStu.getSelectionModel().getSelectedIndex();
                     if (itemno < feedbackStu.getItems().size()) {
                         FeedBackEntry fb = feedbackStu.getItems().get(itemno);
@@ -505,7 +571,7 @@ public class FeedbackArea extends BorderPane {
                         feedbackStu.getSelectionModel().select(itemno + 1);
                     }
                 }
-                if (feedbackDB.isFocused()) {
+                if (lastFocused == 2) {
                     int itemno = feedbackDB.getSelectionModel().getSelectedIndex();
                     if (itemno < feedbackDB.getItems().size()) {
                         FeedBackEntry fb = feedbackDB.getItems().get(itemno);
@@ -535,8 +601,12 @@ public class FeedbackArea extends BorderPane {
         altButtonGP.add(calcAltButton, 0, 4);
         altButtonGP.setAlignment(Pos.CENTER);
         altButtonGP.setVgap(15);
+        grid.getColumnConstraints().add(column1);
         ColumnConstraints column3 = new ColumnConstraints();
         column3.setHalignment(HPos.CENTER);
+        column3.setHgrow(Priority.ALWAYS);
+        column3.setMinWidth(GridPane.USE_PREF_SIZE);
+        column3.setMaxWidth(GridPane.USE_PREF_SIZE);
         altButtonGP.getColumnConstraints().add(column3);
         sp.getItems().addAll(studentVBox, altButtonGP, templateVBox);
         feedbackView.setContent(sp);
@@ -544,7 +614,9 @@ public class FeedbackArea extends BorderPane {
 
         Tab feedbackTextView = new Tab("Text");
         feedbackTextView.setClosable(false);
-        Tools.write(new File(pathToFeedbackFile + ".txt"), "");
+        if (!new File(pathToFeedbackFile + ".txt").exists()) {
+            Tools.write(new File(pathToFeedbackFile + ".txt"), "");
+        }
         synTA = new SyntaxTextAreaFX(pathToFeedbackFile + ".txt");
         feedbackTextView.setContent(synTA.getNode());
         tabPane.getTabs().addAll(feedbackView, feedbackTextView);

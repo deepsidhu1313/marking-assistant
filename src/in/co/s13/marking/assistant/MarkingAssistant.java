@@ -5,6 +5,7 @@
  */
 package in.co.s13.marking.assistant;
 
+import in.co.s13.marking.assistant.meta.Tools;
 import in.co.s13.marking.assistant.ui.MainWindow;
 import java.io.File;
 import java.util.logging.Level;
@@ -30,6 +31,9 @@ public class MarkingAssistant extends Application {
         new File("FEEDBACK").mkdir();
         new File("SCRIPTS").mkdir();
         new File("app/sessions/").mkdirs();
+        if(new File("app/settings.obj").exists()){
+        Tools.readSettings();
+        }
         MainWindow mw = new MainWindow();
         try {
             mw.start(primaryStage);

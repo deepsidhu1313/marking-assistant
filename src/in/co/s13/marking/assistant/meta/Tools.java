@@ -196,10 +196,10 @@ public class Tools {
         executorService.submit(t);
     }
 
-    public static void dumpFeedbackDBForThisSession(){
+    public static void dumpFeedbackDBForThisSession() {
         writeObject(("FEEDBACK/" + GlobalValues.sessionSettings.getSession_name() + "-feedback-db.fdb"), GlobalValues.feedbackDBArray);
     }
-    
+
     public static void run(ExecutorService executorService, int counter, String foldername, String... commands) {
         Thread t = new Thread(new Runnable() {
             @Override
@@ -663,6 +663,16 @@ public class Tools {
         return dirsInAssignmentFolder;
     }
 
+    public static void saveSettings() {
+        GlobalValues.settings.setShowFeedBackInSeparateWindow(GlobalValues.showFeedBackInSeprateWindow);
+        writeObject("app/settings.obj", GlobalValues.settings);
+    }
+
+    public static void readSettings() {
+        GlobalValues.settings = (SettingsEntry) readObject("app/settings.obj");
+        GlobalValues.showFeedBackInSeprateWindow = GlobalValues.settings.isShowFeedBackInSeparateWindow();
+    }
+
     public static void parseFeedbackTemplate() {
         try {
             GlobalValues.feedbackDBArray = new ArrayList<>();
@@ -695,6 +705,9 @@ public class Tools {
                         FeedBackEntry fbe = new FeedBackEntry(i, maxm, minm, 0, commentString, true, FeedBackEntry.EntryType.SECTION_START, 0);
                         GlobalValues.feedbackDBArray.add(fbe);
                         GlobalValues.templateFeedback.add(fbe);
+                        FeedBackEntry endSection2 = new FeedBackEntry(i, 0, 0, 0, "Section End", true, FeedBackEntry.EntryType.SECTION_END, 0);
+                        GlobalValues.templateFeedback.add(endSection2);
+
                     }
                 }
             }

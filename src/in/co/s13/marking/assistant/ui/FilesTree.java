@@ -198,7 +198,7 @@ public class FilesTree implements Runnable {
                     TreeItem<File> item = (TreeItem<File>) msm.getSelectedItem();
                     System.out.println("Selected Text : " + item.getValue());
                     if (item.getValue().exists() && item.getValue().isFile()) {
-                        mainWindow.addTab(item.getValue(), mainWindow.tabcounter);
+                        mainWindow.addTab(item.getValue(), mainWindow.tabcounter.get());
                     } else {
                         System.out.println("File Doesnt exist");
                     }// Create New Tab
