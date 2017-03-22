@@ -92,6 +92,7 @@ public class ExecuteSetupWindow extends Application {
             public void handle(ActionEvent event) {
                 FileChooser jfc = new FileChooser();
                 jfc.setTitle("Choose Files Required");
+                jfc.setInitialDirectory(new File("SOLUTION"));
                 runReqFiles.clear();
                 runReqFiles.addAll(jfc.showOpenMultipleDialog(primaryStage));
                 StringBuilder sb = new StringBuilder();
@@ -114,6 +115,7 @@ public class ExecuteSetupWindow extends Application {
             public void handle(ActionEvent event) {
                 FileChooser jfc = new FileChooser();
                 jfc.setTitle("Choose Sample Output");
+                jfc.setInitialDirectory(new File("SOLUTION"));
                 sampleOutFile = jfc.showOpenDialog(primaryStage);
                 sampleOutFileTF.setText(sampleOutFile.getAbsolutePath());
             }
@@ -121,10 +123,10 @@ public class ExecuteSetupWindow extends Application {
 
         Label input4runLabel = new Label("Input(s) used by program in runtime");
         TextArea input4runTF = new TextArea();
-        input4runTF.setPromptText("Enter each input in new Line\n"
-                + "Below is the example for a program which prompts for a filename to read\n"
-                + "So simply enter the file name like\n"
-                + "inputfilename.txt\n\n\n"
+        input4runTF.setPromptText("Enter each input in new Line\n "
+                + "For example for a program which prompts for a filename to read, \n"
+                + "So simply enter the file name like\n "
+                + "inputfilename.txt\n\n\n "
                 + "or the sequence of inputs in each line");
         grid.add(input4runLabel, 0, 5);
         grid.add(input4runTF, 1, 5);
@@ -138,7 +140,7 @@ public class ExecuteSetupWindow extends Application {
         clearButton.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
-                sampleOutFileTF.setText("");
+                runCommandTF.setText("");
                 runReqFiles.clear();
                 osCB.getSelectionModel().select(GlobalValues.OS);
                 input4runTF.setText("");
@@ -154,7 +156,7 @@ public class ExecuteSetupWindow extends Application {
 
                 GlobalValues.runSettingsList.add(
                         new RunSetting(number, locationCB.getSelectionModel().getSelectedItem(),
-                                input4runTF.getText().trim(),
+                                runCommandTF.getText().trim(),
                                 osCB.getSelectionModel().getSelectedItem(),
                                 runReqFiles, sampleOutFile,input4runTF.getText()));
 

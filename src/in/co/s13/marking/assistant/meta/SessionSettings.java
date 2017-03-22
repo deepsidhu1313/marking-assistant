@@ -16,13 +16,13 @@ import org.json.JSONObject;
  */
 public class SessionSettings implements Serializable {
 
-    private String session_name, lastStudentMarked="\t", CurrentStudent="\t";
+    private String session_name, lastStudentMarked = "\t", CurrentStudent = "\t", remoteUserName, remotePassword;
     private int numberOfCompilerSettings, numberOfRunSettings;
     private ArrayList<CompilerSetting> compilerSettings;
     private ArrayList<RunSetting> runSettings;
     private String feedbackTemplate;
 
-    public SessionSettings(String session_name, String lastStudentMarked, String CurrentStudent, int numberOfCompilerSettings, int numberOfRunSettings, ArrayList<CompilerSetting> compilerSettings, ArrayList<RunSetting> runSettings, String feedbackTemplate) {
+    public SessionSettings(String session_name, String lastStudentMarked, String CurrentStudent, int numberOfCompilerSettings, int numberOfRunSettings, ArrayList<CompilerSetting> compilerSettings, ArrayList<RunSetting> runSettings, String feedbackTemplate, String remoteUserName, String remotePassword) {
         this.session_name = session_name;
         this.lastStudentMarked = lastStudentMarked;
         this.CurrentStudent = CurrentStudent;
@@ -31,6 +31,8 @@ public class SessionSettings implements Serializable {
         this.compilerSettings = compilerSettings;
         this.runSettings = runSettings;
         this.feedbackTemplate = feedbackTemplate;
+        this.remoteUserName = remoteUserName;
+        this.remotePassword = remotePassword;
     }
 
     public String getSession_name() {
@@ -97,6 +99,22 @@ public class SessionSettings implements Serializable {
         this.feedbackTemplate = feedbackTemplate;
     }
 
+    public String getRemoteUserName() {
+        return remoteUserName;
+    }
+
+    public void setRemoteUserName(String remoteUserName) {
+        this.remoteUserName = remoteUserName;
+    }
+
+    public String getRemotePassword() {
+        return remotePassword;
+    }
+
+    public void setRemotePassword(String remotePassword) {
+        this.remotePassword = remotePassword;
+    }
+
     @Override
     public boolean equals(Object obj) {
         if (this == obj) {
@@ -124,6 +142,15 @@ public class SessionSettings implements Serializable {
         if (!Objects.equals(this.CurrentStudent, other.CurrentStudent)) {
             return false;
         }
+        if (!Objects.equals(this.remoteUserName, other.remoteUserName)) {
+            return false;
+        }
+        if (!Objects.equals(this.remotePassword, other.remotePassword)) {
+            return false;
+        }
+        if (!Objects.equals(this.feedbackTemplate, other.feedbackTemplate)) {
+            return false;
+        }
         if (!Objects.equals(this.compilerSettings, other.compilerSettings)) {
             return false;
         }
@@ -135,7 +162,7 @@ public class SessionSettings implements Serializable {
 
     @Override
     public String toString() {
-        return "{" + "session_name:" + session_name + ", lastStudentMarked:" + lastStudentMarked + ", CurrentStudent:" + CurrentStudent + ", numberOfCompilerSettings:" + numberOfCompilerSettings + ", numberOfRunSettings:" + numberOfRunSettings + ", compilerSettings:" + compilerSettings + ", runSettings:" + runSettings + ", feedbackTemplate:" + feedbackTemplate + '}';
+        return "{" + "session_name:" + session_name + ", lastStudentMarked:" + lastStudentMarked + ", CurrentStudent:" + CurrentStudent + ", numberOfCompilerSettings:" + numberOfCompilerSettings + ", numberOfRunSettings:" + numberOfRunSettings + ", compilerSettings:" + compilerSettings + ", runSettings:" + runSettings + ", feedbackTemplate:" + feedbackTemplate + ", remoteUserName:" + remoteUserName + ", remotePassword:" + remotePassword + '}';
     }
 
     public SessionSettings(JSONObject obj) {
@@ -147,6 +174,9 @@ public class SessionSettings implements Serializable {
         compilerSettings = (ArrayList<CompilerSetting>) obj.get("compilerSettings");
         runSettings = (ArrayList<RunSetting>) obj.get("runSettings");
         feedbackTemplate = obj.getString("feedbackTemplate");
+        remoteUserName = obj.getString("remoteUserName");
+        remotePassword = obj.getString("remotePassword");
+
     }
 
 }

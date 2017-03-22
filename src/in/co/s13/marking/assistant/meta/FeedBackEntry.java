@@ -6,6 +6,7 @@
 package in.co.s13.marking.assistant.meta;
 
 import java.io.Serializable;
+import java.util.Comparator;
 import java.util.Objects;
 import javafx.scene.paint.Color;
 import org.json.JSONObject;
@@ -177,7 +178,7 @@ public class FeedBackEntry implements Serializable {
     public String toString() {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < indent; i++) {
-            sb.append("\t");
+            sb.append(" ");
         }
         sb.append("[" + "").append(obtainedMarks).append("/").append(maximumMarks).append("]" + " ").append(feedBack);
         return sb.toString();
@@ -206,4 +207,69 @@ public class FeedBackEntry implements Serializable {
         feedBack = obj.getString("feedBack");
     }
 
+    
+    
+    enum FeedBackEntryComparator implements Comparator<FeedBackEntry> {
+
+        FEEDBACK_SORT {
+                    public int compare(FeedBackEntry o1, FeedBackEntry o2) {
+                        return o1.getFeedBack().compareTo(o2.getFeedBack());
+                    }
+                },
+        ID_SORT {
+                    public int compare(FeedBackEntry o1, FeedBackEntry o2) {
+                        return Integer.valueOf(o1.getId()).compareTo(o2.getId());
+                    }
+                },
+        INDENT_SORT {
+                    public int compare(FeedBackEntry o1, FeedBackEntry o2) {
+                        return Integer.valueOf(o1.getIndent()).compareTo(o2.getIndent());
+                    }
+                },
+        MAX_MARKS_SORT {
+                    public int compare(FeedBackEntry o1, FeedBackEntry o2) {
+                        return Double.valueOf(o1.getMaximumMarks()).compareTo(o2.getMaximumMarks());
+                    }
+                },
+        MIN_MARKS_SORT {
+                    public int compare(FeedBackEntry o1, FeedBackEntry o2) {
+                        return Double.valueOf(o1.getMinimumMarks()).compareTo(o2.getMinimumMarks());
+                    }
+                },
+        OBT_MARKS_SORT {
+                    public int compare(FeedBackEntry o1, FeedBackEntry o2) {
+                        return Double.valueOf(o1.getObtainedMarks()).compareTo(o2.getObtainedMarks());
+                    }
+                },
+        TYPE_SORT {
+                    public int compare(FeedBackEntry o1, FeedBackEntry o2) {
+                        return (o1.getType()).compareTo(o2.getType());
+                    }
+                };
+
+        public static Comparator<FeedBackEntry> decending(final Comparator<FeedBackEntry> other) {
+            return new Comparator<FeedBackEntry>() {
+                public int compare(FeedBackEntry o1, FeedBackEntry o2) {
+                    return -1 * other.compare(o1, o2);
+                }
+            };
+        }
+
+        public static Comparator<FeedBackEntry> getComparator(final FeedBackEntryComparator... multipleOptions) {
+            return new Comparator<FeedBackEntry>() {
+                public int compare(FeedBackEntry o1, FeedBackEntry o2) {
+                    for (FeedBackEntryComparator option : multipleOptions) {
+                        int result = option.compare(o1, o2);
+                        if (result != 0) {
+                            return result;
+                        }
+                    }
+                    return 0;
+                }
+            };
+        }
+    }
+    
+    
+    
 }

@@ -8,6 +8,9 @@ package in.co.s13.marking.assistant.ui;
 import com.sun.javafx.binding.BidirectionalBinding;
 import com.sun.javafx.property.adapter.PropertyDescriptor;
 import in.co.s13.marking.assistant.meta.FeedBackEntry;
+import in.co.s13.marking.assistant.meta.GlobalValues;
+import static in.co.s13.marking.assistant.meta.GlobalValues.datFormat;
+import in.co.s13.marking.assistant.meta.Tools;
 import in.co.s13.syntaxtextareafx.SyntaxTextAreaFX;
 import java.io.File;
 import java.util.ArrayList;
@@ -57,20 +60,21 @@ import org.json.JSONWriter;
  *
  * @author nika
  */
-public class FeedbackArea {
+public class FeedbackArea extends BorderPane {
 
-    private BorderPane feedbackArea;
+//    private BorderPane this;
     private ObjectProperty<ListCell<FeedBackEntry>> dragSource = new SimpleObjectProperty<>();
-    private DataFormat datFormat = new DataFormat("feedback/entry");
     private int itemEnter = 0;
     private int stuFeedBackCounter = 0;
     private ContextMenu cm = new ContextMenu();
     private SyntaxTextAreaFX synTA;
     private File feedBackFile;
+    ListView<FeedBackEntry> feedbackStu = new ListView<>();
 
     public FeedbackArea(String pathToFeedbackFile) {
         feedBackFile = new File(pathToFeedbackFile);
-        feedbackArea = new BorderPane();
+
+//        this = new BorderPane();
         TabPane tabPane = new TabPane();
         Tab feedbackView = new Tab("Graphic");
         SplitPane sp = new SplitPane();
@@ -79,7 +83,6 @@ public class FeedbackArea {
         studentLabel.setStyle(" -fx-font-weight: bold;");
         studentLabel.setPadding(new Insets(5, 10, 0, 10));
         studentLabel.setAlignment(Pos.CENTER);
-        ListView<FeedBackEntry> feedbackStu = new ListView<>();
 
         studentVBox.getChildren().addAll(studentLabel, feedbackStu);
         feedbackStu.setCellFactory(lv -> {
@@ -185,6 +188,7 @@ public class FeedbackArea {
                                 feedbackStu.getItems().remove(itemno);
                                 feedbackStu.getItems().add(itemno - 1, fb);
                                 feedbackStu.getSelectionModel().select(itemno - 1);
+
                             }
                         });
                         MenuItem movedown = new MenuItem("Move Down");
@@ -195,15 +199,26 @@ public class FeedbackArea {
                                 feedbackStu.getItems().remove(itemno);
                                 feedbackStu.getItems().add(itemno + 1, fb);
                                 feedbackStu.getSelectionModel().select(itemno + 1);
+
                             }
                         });
                         MenuItem remove = new MenuItem("Remove");
                         remove.setOnAction((ActionEvent event1) -> {
                             int itemno = feedbackStu.getSelectionModel().getSelectedIndex();
                             feedbackStu.getItems().remove(itemno);
+
+                        });
+                        MenuItem calc = new MenuItem("Calculate");
+                        calc.setOnAction((ActionEvent event1) -> {
+                            if (feedbackStu.getItems().size() > 0) {
+                                setIndent();
+
+                                calculateMarks(feedbackStu.getItems().get(0));
+                            }
+
                         });
                         cm.getItems().clear();
-                        cm.getItems().addAll(moveup, movedown, remove);
+                        cm.getItems().addAll(moveup, movedown, remove, calc);
                         cm.show(feedbackStu, event.getScreenX(), event.getScreenY());
 
                     }
@@ -257,7 +272,11 @@ public class FeedbackArea {
 
             event.consume();
         });
-
+        if (feedBackFile.exists()) {
+            feedbackStu.getItems().addAll((ArrayList<FeedBackEntry>) Tools.readObject(feedBackFile.getAbsolutePath()));
+        } else {
+            feedbackStu.getItems().addAll(GlobalValues.templateFeedback);
+        }
         VBox templateVBox = new VBox(10);
         Label templateLabel = new Label("Drag Feedbacks from here");
         templateLabel.setStyle(" -fx-font-weight: bold;");
@@ -313,10 +332,7 @@ public class FeedbackArea {
 
             return cell;
         });
-        feedbackDB.getItems().addAll(new FeedBackEntry(0, 10, 0, 5, "work hard", true, FeedBackEntry.EntryType.FEEDBACK, 0),
-                new FeedBackEntry(1, 10, 0, 4, "work hard!!", true, FeedBackEntry.EntryType.FEEDBACK, 0),
-                new FeedBackEntry(1, 10, 0, 7, "work hard??", true, FeedBackEntry.EntryType.FEEDBACK, 0));
-
+        feedbackDB.getItems().addAll(GlobalValues.feedbackDBArray);
         GridPane grid = new GridPane();
         grid.setAlignment(Pos.CENTER);
         grid.setHgap(10);
@@ -341,7 +357,7 @@ public class FeedbackArea {
         grid.add(maxMTF, 1, 0);
 
         Label minMarksLabel = new Label("Minimum Marks");
-        TextField minMTF = new TextField();
+        TextField minMTF = new TextField("" + Double.MIN_VALUE);
         grid.add(minMarksLabel, 0, 1);
         grid.add(minMTF, 1, 1);
 
@@ -376,25 +392,167 @@ public class FeedbackArea {
         grid.add(addButton, 0, 6);
         grid.add(clearButton, 1, 6);
 
+        clearButton.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                maxMTF.setText("");
+                minMTF.setText("");
+                obtMTF.setText("" + Double.MIN_VALUE);
+                feedCommTF.setText("");
+                dupCB.getSelectionModel().selectFirst();
+                typCB.getSelectionModel().selectFirst();
+            }
+        });
+
+        addButton.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                double maxm = Double.parseDouble(maxMTF.getText());
+                double minm = Double.parseDouble(minMTF.getText());
+                double obtm = Double.parseDouble(obtMTF.getText());
+                boolean val = dupCB.getSelectionModel().getSelectedItem();
+                FeedBackEntry.EntryType et = typCB.getSelectionModel().getSelectedItem();
+                String feedBack = feedCommTF.getText();
+                GlobalValues.feedbackDBArray.add(new FeedBackEntry(itemEnter, maxm, minm, obtm, feedBack, val, et, itemEnter));
+                save();
+            }
+        });
+
+        feedbackDB.getSelectionModel().selectedItemProperty()
+                .addListener(new ChangeListener<FeedBackEntry>() {
+                    public void changed(ObservableValue<? extends FeedBackEntry> observable,
+                            FeedBackEntry oldValue, FeedBackEntry newValue) {
+                        if (newValue != null) {
+                            maxMTF.setText("" + newValue.getMaximumMarks());
+                            minMTF.setText("" + newValue.getMinimumMarks());
+                            obtMTF.setText("" + newValue.getObtainedMarks());
+                            feedCommTF.setText("" + newValue.getFeedBack());
+                            dupCB.getSelectionModel().select(newValue.isDuplicateAllowed());
+                            typCB.getSelectionModel().select(newValue.getType());
+
+                        }
+                    }
+                });
+
         templateVBox.getChildren().addAll(templateLabel, feedbackDB, addNewFeedBack, grid);
         templateVBox.setAlignment(Pos.CENTER);
         studentVBox.setAlignment(Pos.CENTER);
         VBox.setVgrow(feedbackDB, Priority.ALWAYS);
         VBox.setVgrow(feedbackStu, Priority.ALWAYS);
-        sp.getItems().addAll(studentVBox, templateVBox);
+
+        GridPane altButtonGP = new GridPane();
+        Button addAltButton = new Button("Add");
+        Button remAltButton = new Button("Remove");
+        Button upAltButton = new Button("Move Up");
+        Button downAltButton = new Button("Move Down");
+        Button calcAltButton = new Button("Calculate");
+
+        addAltButton.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                feedbackStu.getItems().add(feedbackStu.getSelectionModel().getSelectedIndex(), new FeedBackEntry(feedbackStu.getItems().size(), feedbackDB.getSelectionModel().getSelectedItem()));
+
+            }
+        });
+
+        remAltButton.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                if (feedbackStu.isFocused()) {
+                    feedbackStu.getItems().remove(feedbackStu.getSelectionModel().getSelectedIndex());
+                }
+                if (feedbackDB.isFocused()) {
+                    feedbackDB.getItems().remove(feedbackDB.getSelectionModel().getSelectedIndex());
+                }
+
+            }
+        });
+
+        upAltButton.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                if (feedbackStu.isFocused()) {
+                    int itemno = feedbackStu.getSelectionModel().getSelectedIndex();
+                    if (itemno > 0) {
+                        FeedBackEntry fb = feedbackStu.getItems().get(itemno);
+                        feedbackStu.getItems().remove(itemno);
+                        feedbackStu.getItems().add(itemno - 1, fb);
+                        feedbackStu.getSelectionModel().select(itemno - 1);
+                    }
+                }
+                if (feedbackDB.isFocused()) {
+                    int itemno = feedbackDB.getSelectionModel().getSelectedIndex();
+                    if (itemno > 0) {
+                        FeedBackEntry fb = feedbackDB.getItems().get(itemno);
+                        feedbackDB.getItems().remove(itemno);
+                        feedbackDB.getItems().add(itemno - 1, fb);
+                        feedbackDB.getSelectionModel().select(itemno - 1);
+                    }
+                }
+
+            }
+        });
+
+        downAltButton.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                if (feedbackStu.isFocused()) {
+                    int itemno = feedbackStu.getSelectionModel().getSelectedIndex();
+                    if (itemno < feedbackStu.getItems().size()) {
+                        FeedBackEntry fb = feedbackStu.getItems().get(itemno);
+                        feedbackStu.getItems().remove(itemno);
+                        feedbackStu.getItems().add(itemno + 1, fb);
+                        feedbackStu.getSelectionModel().select(itemno + 1);
+                    }
+                }
+                if (feedbackDB.isFocused()) {
+                    int itemno = feedbackDB.getSelectionModel().getSelectedIndex();
+                    if (itemno < feedbackDB.getItems().size()) {
+                        FeedBackEntry fb = feedbackDB.getItems().get(itemno);
+                        feedbackDB.getItems().remove(itemno);
+                        feedbackDB.getItems().add(itemno + 1, fb);
+                        feedbackDB.getSelectionModel().select(itemno + 1);
+                    }
+                }
+
+            }
+        });
+
+        calcAltButton.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                if (feedbackStu.getItems().size() > 0) {
+                    setIndent();
+
+                    calculateMarks(feedbackStu.getItems().get(0));
+                }
+            }
+        });
+        altButtonGP.add(addAltButton, 0, 0);
+        altButtonGP.add(remAltButton, 0, 1);
+        altButtonGP.add(upAltButton, 0, 2);
+        altButtonGP.add(downAltButton, 0, 3);
+        altButtonGP.add(calcAltButton, 0, 4);
+        altButtonGP.setAlignment(Pos.CENTER);
+        altButtonGP.setVgap(15);
+        ColumnConstraints column3 = new ColumnConstraints();
+        column3.setHalignment(HPos.CENTER);
+        altButtonGP.getColumnConstraints().add(column3);
+        sp.getItems().addAll(studentVBox, altButtonGP, templateVBox);
         feedbackView.setContent(sp);
         feedbackView.setClosable(false);
 
         Tab feedbackTextView = new Tab("Text");
         feedbackTextView.setClosable(false);
-        synTA = new SyntaxTextAreaFX(pathToFeedbackFile);
+        Tools.write(new File(pathToFeedbackFile + ".txt"), "");
+        synTA = new SyntaxTextAreaFX(pathToFeedbackFile + ".txt");
         feedbackTextView.setContent(synTA.getNode());
         tabPane.getTabs().addAll(feedbackView, feedbackTextView);
-        feedbackArea.setCenter(tabPane);
+        this.setCenter(tabPane);
     }
 
     public Node getNode() {
-        return feedbackArea;
+        return this;
     }
 
     public SyntaxTextAreaFX getSynTA() {
@@ -403,6 +561,74 @@ public class FeedbackArea {
 
     public void setSynTA(SyntaxTextAreaFX synTA) {
         this.synTA = synTA;
+    }
+
+    public void save() {
+        // setIndent();
+        // calculateMarks(feedbackStu.getItems().get(0));
+        synTA.save();
+        List<FeedBackEntry> dat = feedbackStu.getItems();
+        ArrayList<FeedBackEntry> dat2 = new ArrayList<>();
+        for (int i = 0; i < dat.size(); i++) {
+            FeedBackEntry get = dat.get(i);
+            dat2.add(get);
+        }
+
+        Tools.writeObject(feedBackFile.getAbsolutePath(), dat2);
+        Tools.dumpFeedbackDBForThisSession();
+    }
+
+    private void setFeedBackToTextArea() {
+        synTA.setText("");
+        StringBuilder sb = new StringBuilder();
+        ObservableList<FeedBackEntry> items = feedbackStu.getItems();
+        for (int i = 0; i < items.size(); i++) {
+            FeedBackEntry get = items.get(i);
+            sb.append(get.toString() + "\n");
+        }
+        synTA.setText(sb.toString());
+    }
+
+    private void setIndent() {
+        ObservableList<FeedBackEntry> items = feedbackStu.getItems();
+        int indent = 0;
+        for (int i = 0; i < items.size(); i++) {
+            FeedBackEntry get = items.get(i);
+            if (get.getType() == FeedBackEntry.EntryType.SECTION_START) {
+                indent++;
+            }
+            if (get.getType() == FeedBackEntry.EntryType.SECTION_END) {
+                indent--;
+            }
+            get.setIndent(indent);
+        }
+        setFeedBackToTextArea();
+    }
+
+    private Double calculateMarks(FeedBackEntry fb) {
+        ObservableList<FeedBackEntry> items = feedbackStu.getItems();
+        int sectioncounter = 1;
+        double score = 0;
+        for (int i = items.indexOf(fb); i < items.size(); i++) {
+            FeedBackEntry get = items.get(i);
+            if (get.equals(fb)) {
+                continue;
+            }
+            if (get.getType() == FeedBackEntry.EntryType.SECTION_END) {
+                sectioncounter--;
+            }
+            if (sectioncounter == 0) {
+                break;
+            }
+
+            if (get.getType() == FeedBackEntry.EntryType.SECTION_START) {
+                sectioncounter++;
+                score += calculateMarks(get);
+            } else if (get.getType() == FeedBackEntry.EntryType.FEEDBACK) {
+                score += calculateMarks(get);
+            }
+        }
+        return score;
     }
 
     public File getFeedBackFile() {

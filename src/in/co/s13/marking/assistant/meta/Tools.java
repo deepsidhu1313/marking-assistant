@@ -26,9 +26,12 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import static in.co.s13.marking.assistant.meta.GlobalValues.OS;
 import static in.co.s13.marking.assistant.meta.GlobalValues.dirsInAssignmentFolder;
+import in.co.s13.marking.assistant.ui.MainWindow;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 import org.json.JSONArray;
@@ -69,6 +72,7 @@ public class Tools {
             pw.print(text);
             pw.close();
             fw.close();
+            System.out.println("Written " + text + "\n to " + f.getAbsolutePath());
         } catch (IOException ex) {
             Logger.getLogger(Tools.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -192,6 +196,10 @@ public class Tools {
         executorService.submit(t);
     }
 
+    public static void dumpFeedbackDBForThisSession(){
+        writeObject(("FEEDBACK/" + GlobalValues.sessionSettings.getSession_name() + "-feedback-db.fdb"), GlobalValues.feedbackDBArray);
+    }
+    
     public static void run(ExecutorService executorService, int counter, String foldername, String... commands) {
         Thread t = new Thread(new Runnable() {
             @Override
@@ -234,28 +242,58 @@ public class Tools {
      * reside
      * @param main : name of the main class
      */
-    public static void runFiles(ExecutorService executorService, String foldername, String main, int i) {
+    public static void runFiles(ExecutorService executorService, int i, String type, String path, String... commands) {
         Thread t = new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
-                    ProcessBuilder pb = new ProcessBuilder("/bin/bash", "exec.sh", foldername, main);//, "inputfilename" + i);
+
+                    System.out.println("" + commands);
+                    ProcessBuilder pb = new ProcessBuilder(commands);//, "inputfilename" + i);
                     Process p = pb.start();
                     BufferedReader stdInput = new BufferedReader(new InputStreamReader(p.getInputStream()));
                     BufferedReader stdError = new BufferedReader(new InputStreamReader(p.getErrorStream()));
-
-                    PrintWriter outputWriter = new PrintWriter(foldername + "run-out" + i + ".log", "UTF-8");
-                    PrintWriter errorWriter = new PrintWriter(foldername + "run-error" + i + ".log", "UTF-8");
-
+                    String diffExt = "";
+                    if (type.equalsIgnoreCase("diff")) {
+                        diffExt = ".diff";
+                    }
+                    PrintWriter outputWriter = new PrintWriter(path + "/" + type + "-out-" + i + ".log" + diffExt, "UTF-8");
+                    PrintWriter errorWriter = new PrintWriter(path + "/" + type + "-error-" + i + ".log" + diffExt, "UTF-8");
+                    StringBuilder out = new StringBuilder();
+                    int counter = 0;
+                    int diff = 1000;
                     String s = null;
                     while ((s = stdInput.readLine()) != null) {
                         //  System.out.println(s);
                         outputWriter.println(s + "");
+                        if (counter % diff == 0) {
+//                            MainWindow.appendLogToLogArea(out.toString() + "\n");
+                            counter = 0;
+                            out = new StringBuilder();
+                        } else {
+                            counter++;
+                            out.append(s + "\n");
+
+                        }
                     }
+//                    MainWindow.appendLogToLogArea(out.toString() + "\n");
+                    counter = 0;
+                    out = new StringBuilder();
+
                     while ((s = stdError.readLine()) != null) {
                         //System.out.println(s);
                         errorWriter.println(s + "");
+                        if (counter % diff == 0) {
+//                            MainWindow.appendLogToLogArea(out.toString() + "\n");
+                            counter = 0;
+                            out = new StringBuilder();
+                        } else {
+                            counter++;
+                            out.append(s + "\n");
+
+                        }
                     }
+//                    MainWindow.appendLogToLogArea(out.toString() + "\n");
 
                     stdError.close();
                     stdInput.close();
@@ -263,8 +301,13 @@ public class Tools {
                     errorWriter.close();
                     //calculateDiffFromOrigOutput(foldername);
                     p.destroy();
-                    System.out.println("Ran Files in " + foldername);
-                    //generateDiffbetFiles("output", foldername + "run-out.log", foldername);
+                    StringBuilder sb = new StringBuilder();
+                    for (int j = 0; j < commands.length; j++) {
+                        String object = commands[j];
+                        sb.append(object + ", ");
+                    }
+                    System.out.println("Ran Commands" + sb.toString() + "  ");
+                    MainWindow.appendLogToLogArea("Ran Commands" + sb.toString() + "\n");
 
                 } catch (IOException ex) {
                     Logger.getLogger(Tools.class.getName()).log(Level.SEVERE, null, ex);
@@ -417,6 +460,20 @@ public class Tools {
     public static void copyReqFiles(String dir, String[] requiredFiles) {
         for (int i = 0; i < requiredFiles.length; i++) {
             Tools.copyFolder(new File(requiredFiles[i]), new File(dir + "/" + requiredFiles[i]));
+
+        }
+    }
+
+    public static void copyReqFiles(String dir, File[] requiredFiles) {
+        for (int i = 0; i < requiredFiles.length; i++) {
+            Tools.copyFolder((requiredFiles[i]), new File(dir + "/" + requiredFiles[i]));
+
+        }
+    }
+
+    public static void copyReqFiles(String dir, ArrayList<File> requiredFiles) {
+        for (int i = 0; i < requiredFiles.size(); i++) {
+            Tools.copyFolder((requiredFiles.get(i)), new File(dir + "/" + requiredFiles.get(i).getName()));
 
         }
     }
@@ -608,10 +665,11 @@ public class Tools {
 
     public static void parseFeedbackTemplate() {
         try {
-            GlobalValues.feedbackDBArray = new JSONArray();
+            GlobalValues.feedbackDBArray = new ArrayList<>();
             String templateContent = read(GlobalValues.templateFile);
             FeedBackEntry endSection = new FeedBackEntry(0, 0, 0, 0, "Section End", true, FeedBackEntry.EntryType.SECTION_END, 0);
-
+            GlobalValues.feedbackDBArray.add(endSection);
+            GlobalValues.templateFeedback.clear();
             String lines[] = templateContent.split("\n");
             for (int i = 0; i < lines.length; i++) {
                 String line = lines[i];
@@ -635,13 +693,15 @@ public class Tools {
 
                         }
                         FeedBackEntry fbe = new FeedBackEntry(i, maxm, minm, 0, commentString, true, FeedBackEntry.EntryType.SECTION_START, 0);
-                        GlobalValues.feedbackDBArray.put(fbe.toJSON());
+                        GlobalValues.feedbackDBArray.add(fbe);
+                        GlobalValues.templateFeedback.add(fbe);
                     }
                 }
             }
-            GlobalValues.feedbackDBobject = new JSONObject();
-            GlobalValues.feedbackDBobject.put("DB", GlobalValues.feedbackDBArray);
-            write(new File("FEEDBACK/" + GlobalValues.sessionSettings.getSession_name() + "-feedback-db.fdb"), GlobalValues.feedbackDBobject.toString(4));
+//            GlobalValues.feedbackDBobject = new JSONObject();
+            // GlobalValues.feedbackDBobject.put("DB", GlobalValues.feedbackDBArray);
+            writeObject(("FEEDBACK/" + GlobalValues.sessionSettings.getSession_name() + "-feedback-db.fdb"), GlobalValues.feedbackDBArray);
+            writeObject(("FEEDBACK/" + GlobalValues.sessionSettings.getSession_name() + "-feedback-template.obj"), GlobalValues.templateFeedback);
 
         } catch (IOException ex) {
             Logger.getLogger(Tools.class.getName()).log(Level.SEVERE, null, ex);

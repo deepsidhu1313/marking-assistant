@@ -10,6 +10,7 @@ import in.co.s13.marking.assistant.meta.GlobalValues;
 import java.io.File;
 import java.sql.ResultSet;
 import java.util.ArrayList;
+import java.util.Arrays;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.Event;
@@ -26,9 +27,9 @@ import javafx.scene.input.MouseEvent;
  * @author Nika
  */
 public class FilesTree implements Runnable {
-
+    
     static CustomTree filetree = new CustomTree();
-
+    
     public static TreeView<File> tv = new TreeView();
     public static Image folderCollapseImage = new Image(ClassLoader.getSystemResourceAsStream("icons/folder.png"));
     public static Image folderExpandImage = new Image(ClassLoader.getSystemResourceAsStream("icons/folder-open.png"));
@@ -43,12 +44,12 @@ public class FilesTree implements Runnable {
     File[] filelist;
     File f = new File("ASSIGNMENTS");
     int timeout = 0;
-
+    
     public FilesTree(MainWindow mw) {
         this.mainWindow = mw;
         //  this.getTree();
     }
-
+    
     private TreeView buildFileSystemBrowser() {
         TreeItem<File> root = createNode(f);
         root.setGraphic(new ImageView(folderExpandImage));
@@ -76,7 +77,7 @@ public class FilesTree implements Runnable {
             // exercise for the reader.
             private boolean isFirstTimeChildren = true;
             private boolean isFirstTimeLeaf = true;
-
+            
             @Override
             public ObservableList<TreeItem<File>> getChildren() {
                 if (isFirstTimeChildren) {
@@ -88,10 +89,10 @@ public class FilesTree implements Runnable {
                     this.setExpanded(true);
                     super.getChildren().setAll(buildChildren(this));
                 }
-
+                
                 return super.getChildren();
             }
-
+            
             @Override
             public boolean isLeaf() {
                 if (isFirstTimeLeaf) {
@@ -99,21 +100,22 @@ public class FilesTree implements Runnable {
                     File f = (File) getValue();
                     isLeaf = f.isFile();
                 }
-
+                
                 return isLeaf;
             }
-
+            
             private ObservableList<TreeItem<File>> buildChildren(TreeItem<File> TreeItem) {
-
+                
                 File f = TreeItem.getValue();
                 if (f != null && f.isDirectory()) {
                     // super.setGraphic(new ImageView(folderCollapseImage));
                     File[] files = f.listFiles();
+                    Arrays.sort(files);
                     // System.out.println(""+files.toString());
                     TreeItem.setExpanded(true);
                     if (files != null) {
                         ObservableList<TreeItem<File>> children = FXCollections.observableArrayList();
-
+                        
                         for (int i = 0; i < files.length; i++) {
                             /*boolean notIncluded = false;
                             for (String listOpenedProject : MainWindow.listOpenedProjects) {
@@ -133,19 +135,19 @@ public class FilesTree implements Runnable {
 
                                 }
                             }*/
-
+                            
                             children.add(createNode(files[i]));
                             if (files[i].isDirectory()) {
                                 children.get(i).setGraphic(new ImageView(folderCollapseImage));
                                 // children.get(i).setExpanded(true);
                             } else {
                                 children.get(i).setGraphic(new ImageView(fileImage));
-
+                                
                             }
                             children.get(i).addEventHandler(TreeItem.branchCollapsedEvent(), new EventHandler() {
                                 @Override
                                 public void handle(Event e) {
-
+                                    
                                     TreeItem<File> source = (TreeItem<File>) e.getSource();
                                     File source2 = source.getValue();
                                     if (source2.isDirectory() && !source.isExpanded()) {
@@ -170,20 +172,20 @@ public class FilesTree implements Runnable {
                                 }
                             });
                             children.get(i).setExpanded(expandedDirs.contains(children.get(i).getValue()));
-
+                            
                         }
                         return children;
                     }
                 }
-
+                
                 return FXCollections.emptyObservableList();
             }
         };
     }
-
+    
     @Override
     public void run() {
-
+        
         {
             filetree.setSimpleRoot(f.getName());
             tv = this.buildFileSystemBrowser();
@@ -192,16 +194,16 @@ public class FilesTree implements Runnable {
             MultipleSelectionModel msm = tv.getSelectionModel();
             tv.setOnMouseClicked((MouseEvent mouseEvent) -> {
                 if (mouseEvent.getClickCount() % 2 == 0) {
-
+                    
                     TreeItem<File> item = (TreeItem<File>) msm.getSelectedItem();
                     System.out.println("Selected Text : " + item.getValue());
                     if (item.getValue().exists() && item.getValue().isFile()) {
-//                        mainWindow.addTab(item.getValue(), mainWindow.tabcounter);
+                        mainWindow.addTab(item.getValue(), mainWindow.tabcounter);
                     } else {
                         System.out.println("File Doesnt exist");
                     }// Create New Tab
                 } else {
-
+                    
                     TreeItem<File> item = (TreeItem<File>) msm.getSelectedItem();
                     if (item != null && item.getValue() != null && !item.getValue().getName().equalsIgnoreCase("workspace")) {
                         System.out.println("Selected Text : " + item.getValue().getAbsolutePath());
@@ -216,7 +218,7 @@ public class FilesTree implements Runnable {
             });
         }
     }
-
+    
     public static String getProjectName(File f) {
         if (f.getParentFile() != null) {
             if (f.getParentFile()
@@ -232,7 +234,7 @@ public class FilesTree implements Runnable {
             return "";
         }
     }
-
+    
     public static String getProjectName(TreeItem<File> item) {
         if (item.getParent() != null) {
             if (item.getParent()
@@ -246,7 +248,7 @@ public class FilesTree implements Runnable {
         } else {
             return "";
         }
-
+        
     }
-
+    
 }

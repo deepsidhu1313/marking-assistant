@@ -5,10 +5,14 @@
  */
 package in.co.s13.marking.assistant.ui;
 
+import in.co.s13.marking.assistant.meta.CompilerSetting;
+import in.co.s13.marking.assistant.meta.FeedBackEntry;
 import in.co.s13.marking.assistant.meta.GlobalValues;
+import in.co.s13.marking.assistant.meta.RunSetting;
 import in.co.s13.marking.assistant.meta.SessionSettings;
 import in.co.s13.marking.assistant.meta.Tools;
 import static in.co.s13.marking.assistant.meta.Tools.write;
+import static in.co.s13.marking.assistant.meta.Tools.writeObject;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -66,15 +70,27 @@ import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 
 import in.co.s13.marking.assistant.ui.CustomTree;
+import in.co.s13.syntaxtextareafx.SyntaxTextAreaFX;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import javafx.geometry.HPos;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.PasswordField;
+import javafx.scene.control.Tooltip;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
+import jdk.nashorn.internal.objects.Global;
 import org.controlsfx.control.action.Action;
+import org.fxmisc.richtext.CodeArea;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 /**
@@ -102,6 +118,7 @@ public class MainWindow extends Application implements Runnable {
     public static int selectedtab = 0;
     public static TextArea consoleArea = new TextArea();
     public static TabPane bottomTabPane;
+    public static TextArea logArea = new TextArea();
 
     @Override
     public void start(final Stage stage) throws Exception {
@@ -116,23 +133,27 @@ public class MainWindow extends Application implements Runnable {
         // --- Menu File
         Menu menuFile = new Menu("File");
 
-        MenuItem newSessionItem = new MenuItem("\tNew Session\t\t");
+        MenuItem newSessionItem = new MenuItem("\tNew Session");
         newSessionItem.setOnAction(new EventHandler() {
             public void handle(Event t) {
+                synchroniseUi();
                 doNewSession();
             }
         });
+        newSessionItem.setAccelerator(new KeyCodeCombination(KeyCode.N, KeyCombination.CONTROL_DOWN));
         menuFile.getItems().add(newSessionItem);
 
-        MenuItem continueSessionItem = new MenuItem("\tResume Session\t\t");
+        MenuItem continueSessionItem = new MenuItem("\tResume Session");
         continueSessionItem.setOnAction(new EventHandler() {
             public void handle(Event t) {
+                synchroniseUi();
                 doContinueSession();
             }
         });
+        continueSessionItem.setAccelerator(new KeyCodeCombination(KeyCode.O, KeyCombination.CONTROL_DOWN));
         menuFile.getItems().add(continueSessionItem);
 
-        MenuItem sync = new MenuItem("\tSync\t\t");
+        MenuItem sync = new MenuItem("\tSync");
         sync.setOnAction(new EventHandler() {
             public void handle(Event t) {
 
@@ -141,65 +162,96 @@ public class MainWindow extends Application implements Runnable {
         });
         menuFile.getItems().add(sync);
 
-        MenuItem save = new MenuItem("\tSave\t\t");
+        MenuItem save = new MenuItem("\tSave");
         save.setOnAction(new EventHandler() {
             public void handle(Event t) {
+                synchroniseUi();
                 doSave();
             }
         });
+        save.setAccelerator(new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN));
         menuFile.getItems().add(save);
 
-        MenuItem exit = new MenuItem("\tExit\t\t");
+        MenuItem saveAll = new MenuItem("\tSave All");
+        saveAll.setOnAction(new EventHandler() {
+            public void handle(Event t) {
+                synchroniseUi();
+                doSaveAll();
+            }
+        });
+        saveAll.setAccelerator(new KeyCodeCombination(KeyCode.S, KeyCombination.SHIFT_DOWN, KeyCombination.CONTROL_DOWN));
+        menuFile.getItems().add(saveAll);
+
+        MenuItem exit = new MenuItem("\tExit");
         exit.setOnAction(new EventHandler() {
             public void handle(Event t) {
+                synchroniseUi();
                 doExit(t);
 
             }
         });
         menuFile.getItems().add(exit);
+        Menu menuFix = new Menu("Fix");
+        MenuItem fixName = new MenuItem("Fix Names");
+        fixName.setOnAction((ActionEvent event) -> {
+            synchroniseUi();
+            try {
+                FixNameWindow fnw = new FixNameWindow();
+                fnw.start(new Stage());
+            } catch (Exception ex) {
+                Logger.getLogger(MainWindow.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
+        });
+        menuFix.getItems().add(fixName);
         Menu menuRun = new Menu("Run");
         MenuItem itemCompileThis = new MenuItem("Compile This Folder");
         itemCompileThis.setOnAction(new EventHandler() {
             public void handle(Event t) {
-                //   parse();
+                synchroniseUi();
+                doCompileThis();
             }
         });
         MenuItem itemCompileAll = new MenuItem("Compile All");
         itemCompileAll.setOnAction(new EventHandler() {
             public void handle(Event t) {
-                // execute(selectedtab);
+                synchroniseUi();
+                doCompileAll();
             }
         });
         MenuItem itemRunThis = new MenuItem("Run This");
         itemRunThis.setOnAction(new EventHandler() {
             public void handle(Event t) {
-                // execute(selectedtab);
+                synchroniseUi();
+                doRunThis();
             }
         });
         MenuItem itemRunAll = new MenuItem("Run All");
         itemRunAll.setOnAction(new EventHandler() {
             public void handle(Event t) {
-                // execute(selectedtab);
+                synchroniseUi();
+                doRunAll();
             }
         });
         MenuItem itemDiffThis = new MenuItem("Compare This");
         itemDiffThis.setOnAction(new EventHandler() {
             public void handle(Event t) {
-                // execute(selectedtab);
+                synchroniseUi();
+                doCompareThis();
             }
         });
         MenuItem itemDiffAll = new MenuItem("Compare All");
         itemDiffAll.setOnAction(new EventHandler() {
             public void handle(Event t) {
-                // execute(selectedtab);
+                synchroniseUi();
+                doCompareAll();
             }
         });
 
         menuRun.getItems().addAll(itemCompileThis, itemCompileAll,
                 itemRunThis, itemRunAll, itemDiffThis, itemDiffAll);
 
-        menuBar.getMenus().addAll(menuFile, menuRun);
+        menuBar.getMenus().addAll(menuFile, menuFix, menuRun);
         //Setup Center and Right
         // TabPaneWrapper wrapper = new TabPaneWrapper(Orientation.HORIZONTAL, .9);
         centerTabPane = new TabPane();
@@ -229,21 +281,22 @@ public class MainWindow extends Application implements Runnable {
         centerTabPane.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<Tab>() {
             @Override
             public void changed(ObservableValue<? extends Tab> tab, Tab oldTab, final Tab newTab) {
-                if (newTab.getText() == null) {
-                    stage.setTitle("");
+                if (newTab != null) {
+                    if (newTab.getText() == null) {
+                        stage.setTitle("");
 
-                } else {
-                    stage.setTitle("Marking Assisstant - " + GlobalValues.selectedParentFolder + " - " + newTab.getText());
-                    selectedtab = Integer.parseInt(newTab.getId());
-                    synchroniseUi();
+                    } else {
+                        stage.setTitle("Marking Assisstant - " + GlobalValues.sessionSettings.getCurrentStudent() + " - " + newTab.getText());
+                        selectedtab = Integer.parseInt(newTab.getId());
+                        synchroniseUi();
 
-                    //  GlobalValues.selectedParentFolder = FilesTree.getProjectName(new File(newTab.getTooltip().getText()));
-                    if (GlobalValues.selectedParentFolder != null && (!GlobalValues.lastSelectedParentFolder.trim().equalsIgnoreCase(GlobalValues.selectedParentFolder.trim()))) {
-                        //   loadManifest(new File("workspace/" + GlobalValues.selectedParentFolder));
+                        //  GlobalValues.selectedParentFolder = FilesTree.getProjectName(new File(newTab.getTooltip().getText()));
+                        if (GlobalValues.selectedParentFolder != null && (!GlobalValues.lastSelectedParentFolder.trim().equalsIgnoreCase(GlobalValues.selectedParentFolder.trim()))) {
+                            //   loadManifest(new File("workspace/" + GlobalValues.selectedParentFolder));
+                        }
+
                     }
-
                 }
-
             }
         });
 //        FeedbackArea fba = new FeedbackArea();
@@ -262,10 +315,25 @@ public class MainWindow extends Application implements Runnable {
         VBox topBox = new VBox(10);
         HBox buttonBar = new HBox(10);
         Button prevButton = new Button("Previous");
+        prevButton.setOnAction((ActionEvent event) -> {
+            doPreviousStudent();
+        });
         Button compileButton = new Button("Compile");
+        compileButton.setOnAction((ActionEvent event) -> {
+            doCompileThis();
+        });
         Button runButton = new Button("Run");
+        runButton.setOnAction((ActionEvent event) -> {
+            doRunThis();
+        });
         Button diffButton = new Button("Compare");
+        diffButton.setOnAction((ActionEvent event) -> {
+            doCompareThis();
+        });
         Button nextButton = new Button("Next");
+        nextButton.setOnAction((ActionEvent event) -> {
+            doNextStudent();
+        });
         Region leftspace = new Region();
         leftspace.setMinWidth(50);
         //buttonBar.getChildren().add(leftspace);
@@ -317,7 +385,7 @@ public class MainWindow extends Application implements Runnable {
         this.stage.setX(100);
         this.stage.setY(100);
         this.stage.show();
-
+        firstDiag();
         ideStarted = true;
         this.stage.setOnCloseRequest(new EventHandler() {
             public void handle(Event t) {
@@ -326,6 +394,26 @@ public class MainWindow extends Application implements Runnable {
         });
 
         synchroniseUi();
+    }
+
+    void firstDiag() {
+        Stage s = new Stage();
+        HBox hBox = new HBox(10);
+        hBox.setPadding(new Insets(10, 10, 10, 10));
+        Button newSessButton = new Button("New Session");
+        newSessButton.setOnAction((ActionEvent event) -> {
+            doNewSession();
+            s.close();
+        });
+        Button conSessButton = new Button("Resume Session");
+        conSessButton.setOnAction((ActionEvent event) -> {
+            doContinueSession();
+            s.close();
+        });
+        hBox.getChildren().addAll(newSessButton, conSessButton);
+        s.setTitle("Choose");
+        s.setScene(new Scene(hBox));
+        s.showAndWait();
     }
 
     public void synchroniseUi() {
@@ -344,6 +432,69 @@ public class MainWindow extends Application implements Runnable {
             }
         });
 
+    }
+
+    void doPreviousStudent() {
+        doSaveAll();
+        centerTabPane.getTabs().clear();
+        ArrayList<File> students = Tools.getDirsInAssignmentDir();
+        for (int i = 0; i < students.size(); i++) {
+            File get = students.get(i);
+            System.out.println("Comparing:" + GlobalValues.sessionSettings.getCurrentStudent() + " with " + get.getName());
+            if (GlobalValues.sessionSettings.getCurrentStudent().equalsIgnoreCase(get.getName()) && i > 0) {
+                GlobalValues.sessionSettings.setLastStudentMarked(get.getName());
+                
+                openFilesForStudent(students.get(i - 1));
+
+                break;
+            }
+        }
+    }
+
+    void doNextStudent() {
+        doSaveAll();
+        centerTabPane.getTabs().clear();
+        ArrayList<File> students = Tools.getDirsInAssignmentDir();
+        for (int i = 0; i < students.size(); i++) {
+            File get = students.get(i);
+            System.out.println("Comparing:" + GlobalValues.sessionSettings.getCurrentStudent() + " with " + get.getName());
+            if (GlobalValues.sessionSettings.getCurrentStudent().equalsIgnoreCase(get.getName()) && i < students.size() - 1) {
+                GlobalValues.sessionSettings.setLastStudentMarked(get.getName());
+                openFilesForStudent(students.get(i + 1));
+
+                break;
+            }
+        }
+    }
+
+    void openFilesForStudent(File get) {
+        File files[] = get.listFiles();
+        for (int i = 0; i < files.length; i++) {
+            File file = files[i];
+            if (!file.isDirectory()) {
+                if (!file.getName().endsWith(".class")) {
+                    try {
+                        if (Tools.read(file).length() > 1) {
+                            addTab(file, tabcounter);
+                        }
+                    } catch (IOException ex) {
+                        Logger.getLogger(MainWindow.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                }
+            }
+        }
+        if (!Arrays.asList(files).contains(new File(get.getAbsolutePath() + "/feedback"))) {
+            addTab(new File(get.getAbsolutePath() + "/feedback"), tabcounter);
+        }
+        GlobalValues.sessionSettings.setCurrentStudent(get.getName());
+
+    }
+
+    void startFromFirstStudent() {
+        ArrayList<File> students = Tools.getDirsInAssignmentDir();
+        if (students.size() > 0) {
+            openFilesForStudent(students.get(0));
+        }
     }
 
     public void doNewSession() {
@@ -477,10 +628,14 @@ public class MainWindow extends Application implements Runnable {
             }
 
             GlobalValues.sessionSettings = new SessionSettings(sessionName.getText(),
-                    "", "", comNum, runNum, GlobalValues.compilerSettingsList, GlobalValues.runSettingsList, templatePath.getText().trim());
+                    "", "", comNum, runNum, GlobalValues.compilerSettingsList, GlobalValues.runSettingsList,
+                    templatePath.getText().trim(), usernameTF.getText().trim(),
+                    passwdTF.getText().trim());
             Tools.parseFeedbackTemplate();
             Tools.writeObject(("app/sessions/" + sessionName.getText() + ".obj"), GlobalValues.sessionSettings);
+
             newProjectDialog.close();
+            startFromFirstStudent();
             event.consume();
         });
         cancelbutton.setOnAction((ActionEvent event) -> {
@@ -499,15 +654,32 @@ public class MainWindow extends Application implements Runnable {
         synchroniseUi();
         FileChooser jfc = new FileChooser();
         jfc.setTitle("Select Session File");
-        File choice = jfc.showOpenDialog(stage);
+        jfc.setInitialDirectory(new File("./app/sessions/"));
+        File choice = jfc.showOpenDialog(new Stage());
         GlobalValues.sessionSettings = (SessionSettings) Tools.readObject(choice.getAbsolutePath());
-        try {
-            GlobalValues.feedbackDBobject = new JSONObject(Tools.read((new File("FEEDBACK/" + GlobalValues.sessionSettings.getSession_name() + "-feedback-db.fdb"))));
-            GlobalValues.feedbackDBArray = GlobalValues.feedbackDBobject.getJSONArray("DB");
-        } catch (IOException ex) {
-            Logger.getLogger(MainWindow.class.getName()).log(Level.SEVERE, null, ex);
+        GlobalValues.feedbackDBArray = (ArrayList<FeedBackEntry>) Tools.readObject(("FEEDBACK/" + GlobalValues.sessionSettings.getSession_name() + "-feedback-db.fdb"));
+        GlobalValues.templateFeedback = (ArrayList<FeedBackEntry>) Tools.readObject(("FEEDBACK/" + GlobalValues.sessionSettings.getSession_name() + "-feedback-template.obj"));
+        if (GlobalValues.sessionSettings.getCurrentStudent().length() < 1) {
+            if (GlobalValues.sessionSettings.getLastStudentMarked().length() < 1) {
+                startFromFirstStudent();
+                return;
+            } else {
+                GlobalValues.sessionSettings.setCurrentStudent(GlobalValues.sessionSettings.getLastStudentMarked());
+
+            }
+
+        }
+        openFilesForStudent(new File("ASSIGNMENTS/" + GlobalValues.sessionSettings.getCurrentStudent()));
+
+    }
+
+    String getFirstStudent() {
+        File files[] = new File("ASSIGNMENTS").listFiles();
+        if (files.length > 0) {
+            return files[0].getName();
         }
 
+        return "";
     }
 
     private void doExit(Event e) {
@@ -524,75 +696,364 @@ public class MainWindow extends Application implements Runnable {
     }
 
     private boolean doSave() {
+        Tools.writeObject(("app/sessions/" + GlobalValues.sessionSettings.getSession_name() + ".obj"), GlobalValues.sessionSettings);
         File file2 = new File(textTab[selectedtab].getTooltip().getText());
         if (file2.exists()) {
             file2.delete();
         }
-        PrintStream out = null;
-        try {
-            out = new PrintStream(textTab[selectedtab].getTooltip().getText()); //new AppendFileStream
-        } catch (FileNotFoundException ex) {
-            Logger.getLogger(MainWindow.class.getName()).log(Level.SEVERE, null, ex);
+        Node contentNode = textTab[selectedtab].getContent();
+        if (contentNode instanceof SyntaxTextAreaFX) {
+            ((SyntaxTextAreaFX) contentNode).save();
+        } else if (contentNode instanceof FeedbackArea) {
+            ((FeedbackArea) contentNode).save();
+
         }
+//        PrintStream out = null;
+//        try {
+//            out = new PrintStream(textTab[selectedtab].getTooltip().getText()); //new AppendFileStream
+//        } catch (FileNotFoundException ex) {
+//            Logger.getLogger(MainWindow.class.getName()).log(Level.SEVERE, null, ex);
+//        }
 //        out.print(GlobalValues.ta[selectedtab].getText());
-        out.close();
+//        out.close();
         return true;
         // return doSaveAs();
     }
-//
-//    public static void addTab(File selectedFile, int tabcounter) {
-//        if (!GlobalValues.listOpenedFiles.isEmpty() && GlobalValues.listOpenedFiles.contains(selectedFile.getAbsolutePath())) {
-//            ObservableList<Tab> templs = centerTabPane.getTabs();
-//            System.out.println("" + templs);
-//            for (int i = 0; i < templs.size(); i++) {
-//                System.out.println("" + templs.get(i).getTooltip());
-//                if ((templs.get(i).getTooltip() != null) && templs.get(i).getTooltip().getText().equalsIgnoreCase(selectedFile.getAbsolutePath())) {
-//                    final int r = i;
-//                    Platform.runLater(() -> {
-//                        centerTabPane.getSelectionModel().select(r);
-//                    });
-//                }
-//            }
-//        } else {
-//            textTab[tabcounter] = new Tab(selectedFile.getName());
-//
-//            textTab[tabcounter].setId("" + tabcounter);
-//            textTab[tabcounter].setTooltip(new Tooltip(selectedFile.getAbsolutePath()));
-//            textTab[tabcounter].setOnClosed((Event e) -> {
-//             //   GlobalValues.listOpenedFiles.clear();
-//                ObservableList<Tab> tl = centerTabPane.getTabs();
-//                tl.stream().forEach((tl1) -> {
-//             //       GlobalValues.listOpenedFiles.add(tl1.getTooltip().getText());
-//                });
-//            });
-//            //GlobalValues.listOpenedFiles.add(selectedFile.getAbsolutePath().trim());
-//           // GlobalValues.ta[tabcounter] = new SyntaxTextArea();
-//            //TextArea ta= new TextArea();
-//            //SwingNode sn = new SwingNode();
-//            String line = null;
-//            String text = "";
-//            try {
-//                String temp = read(selectedFile);
-//                if (temp != null) {
-//                    text += temp;
-//                }
-//            } catch (IOException ex) {
-//                Logger.getLogger(MainWindow.class.getName()).log(Level.SEVERE, null, ex);
-//            }
-//            GlobalValues.ta[tabcounter].setText(text);
-//
-//            try (PrintStream out = new PrintStream(selectedFile.getAbsolutePath())) {
-//                out.print(text);
-//            } catch (FileNotFoundException ex) {
-//                Logger.getLogger(MainWindow.class.getName()).log(Level.SEVERE, null, ex);
-//            }
-//
-//            textTab[tabcounter].setContent(GlobalValues.ta[tabcounter].getNode());
-//            textTab[tabcounter].getStyleClass().add(org.fxmisc.richtext.demo.JavaKeywordsAsync.class.getResource("java-keywords.css").toExternalForm());
-//            centerTabPane.getTabs().add(textTab[tabcounter]);
-//            IncrementTabcounter();
-//        }
-//    }
+
+    public void doSaveAll() {
+        List<Tab> tabs = centerTabPane.getTabs();
+        for (int i = 0; i < tabs.size(); i++) {
+            Tab get = tabs.get(i);
+            Node contentNode = get.getContent();
+            if (contentNode instanceof SyntaxTextAreaFX) {
+                ((SyntaxTextAreaFX) contentNode).save();
+            } else if (contentNode instanceof FeedbackArea) {
+                ((FeedbackArea) contentNode).save();
+
+            }
+        }
+    }
+
+    public void doCompileThis() {
+        showLogArea();
+        ExecutorService executorService = Executors.newFixedThreadPool(2);
+        ArrayList<CompilerSetting> compilerSettings = GlobalValues.sessionSettings.getCompilerSettings();
+        for (int i = 0; i < compilerSettings.size(); i++) {
+            CompilerSetting get = compilerSettings.get(i);
+            int id = get.getId();
+
+            ArrayList<File> complierReqFiles = get.getCompilerReqFiles();
+            String scriptName = "SCRIPTS/"
+                    + GlobalValues.sessionSettings.getSession_name()
+                    + "-compile-"
+                    + id;
+            if (get.getOS().trim().equalsIgnoreCase("linux")) {
+                scriptName += ".sh";
+                write(new File(scriptName),
+                        "#!/bin/bash\ncd \"${1}\"\n" + get.getCompilerCommand());
+            } else {
+
+            }
+            File file = new File("ASSIGNMENTS/" + GlobalValues.sessionSettings.getCurrentStudent());
+            if (file.isDirectory()) {
+                Tools.copyReqFiles(file.getAbsolutePath() + "/", complierReqFiles);
+                Tools.runFiles(executorService, id, "compile", file.getAbsolutePath(), "/bin/bash", scriptName, file.getAbsolutePath());
+            }
+
+        }
+
+        executorService.shutdown();
+        try {
+            executorService.awaitTermination(120, TimeUnit.SECONDS);
+        } catch (InterruptedException ex) {
+            Logger.getLogger(MainWindow.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+    }
+
+    public void doCompileAll() {
+        showLogArea();
+        ExecutorService executorService = Executors.newFixedThreadPool(2);
+        ArrayList<CompilerSetting> compilerSettings = GlobalValues.sessionSettings.getCompilerSettings();
+        for (int i = 0; i < compilerSettings.size(); i++) {
+            CompilerSetting get = compilerSettings.get(i);
+            int id = get.getId();
+            File assFile = new File("ASSIGNMENTS");
+            File files[] = assFile.listFiles();
+            ArrayList<File> complierReqFiles = get.getCompilerReqFiles();
+            String scriptName = "SCRIPTS/"
+                    + GlobalValues.sessionSettings.getSession_name()
+                    + "-compile-"
+                    + id;
+            if (get.getOS().trim().equalsIgnoreCase("linux")) {
+                scriptName += ".sh";
+                write(new File(scriptName),
+                        "#!/bin/bash\ncd \"${1}\"\n" + get.getCompilerCommand());
+            } else {
+
+            }
+            for (int j = 0; j < files.length; j++) {
+                File file = files[j];
+                if (file.isDirectory()) {
+                    Tools.copyReqFiles(file.getAbsolutePath() + "/", complierReqFiles);
+                    Tools.runFiles(executorService, id, "compile", file.getAbsolutePath(), "/bin/bash", scriptName, file.getAbsolutePath());
+                }
+            }
+
+        }
+
+        executorService.shutdown();
+        try {
+            executorService.awaitTermination(120, TimeUnit.SECONDS);
+        } catch (InterruptedException ex) {
+            Logger.getLogger(MainWindow.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+    }
+
+    public void doRunAll() {
+        showLogArea();
+        ExecutorService executorService = Executors.newFixedThreadPool(2);
+        ArrayList<RunSetting> runSettings = GlobalValues.sessionSettings.getRunSettings();
+        for (int i = 0; i < runSettings.size(); i++) {
+            RunSetting get = runSettings.get(i);
+            int id = get.getId();
+            File assFile = new File("ASSIGNMENTS");
+            File files[] = assFile.listFiles();
+            ArrayList<File> complierReqFiles = get.getRunReqFiles();
+            String scriptName = "SCRIPTS/"
+                    + GlobalValues.sessionSettings.getSession_name()
+                    + "-run-"
+                    + id;
+            if (get.getOS().trim().equalsIgnoreCase("linux")) {
+                scriptName += ".sh";
+                String redirInp = "";
+                if (get.getInputSequence().length() > 0) {
+                    redirInp = " < input-" + id;
+
+                }
+                write(new File(scriptName),
+                        "#!/bin/bash\ncd \"${1}\"\n" + get.getRunCommand() + redirInp);
+            } else {
+
+            }
+            for (int j = 0; j < files.length; j++) {
+                File file = files[j];
+                if (file.isDirectory()) {
+                    Tools.copyReqFiles(file.getAbsolutePath() + "/", complierReqFiles);
+                    if (get.getInputSequence().length() > 0) {
+                        Tools.write(new File(file.getAbsolutePath() + "/input-" + id), get.getInputSequence());
+                    }
+                    Tools.runFiles(executorService, id, "run", file.getAbsolutePath(), "/bin/bash", scriptName, file.getAbsolutePath());
+                }
+            }
+
+        }
+
+        executorService.shutdown();
+        try {
+            executorService.awaitTermination(120, TimeUnit.SECONDS);
+        } catch (InterruptedException ex) {
+            Logger.getLogger(MainWindow.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+    }
+
+    public void doRunThis() {
+        showLogArea();
+        ExecutorService executorService = Executors.newFixedThreadPool(2);
+        ArrayList<RunSetting> runSettings = GlobalValues.sessionSettings.getRunSettings();
+        for (int i = 0; i < runSettings.size(); i++) {
+            RunSetting get = runSettings.get(i);
+            int id = get.getId();
+
+            ArrayList<File> complierReqFiles = get.getRunReqFiles();
+            String scriptName = "SCRIPTS/"
+                    + GlobalValues.sessionSettings.getSession_name()
+                    + "-run-"
+                    + id;
+            if (get.getOS().trim().equalsIgnoreCase("linux")) {
+                scriptName += ".sh";
+                String redirInp = "";
+                if (get.getInputSequence().length() > 0) {
+                    redirInp = " < input-" + id;
+
+                }
+                write(new File(scriptName),
+                        "#!/bin/bash\ncd \"${1}\"\n" + get.getRunCommand() + redirInp);
+            } else {
+
+            }
+            {
+                File file = new File("ASSIGNMENTS/" + GlobalValues.sessionSettings.getCurrentStudent());
+
+                if (file.isDirectory()) {
+                    Tools.copyReqFiles(file.getAbsolutePath() + "/", complierReqFiles);
+                    if (get.getInputSequence().length() > 0) {
+                        Tools.write(new File(file.getAbsolutePath() + "/input-" + id), get.getInputSequence());
+                    }
+                    Tools.runFiles(executorService, id, "run", file.getAbsolutePath(), "/bin/bash", scriptName, file.getAbsolutePath());
+                }
+            }
+
+        }
+
+        executorService.shutdown();
+        try {
+            executorService.awaitTermination(120, TimeUnit.SECONDS);
+        } catch (InterruptedException ex) {
+            Logger.getLogger(MainWindow.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+    }
+
+    public void doCompareAll() {
+        showLogArea();
+        ExecutorService executorService = Executors.newFixedThreadPool(2);
+        ArrayList<RunSetting> runSettings = GlobalValues.sessionSettings.getRunSettings();
+        for (int i = 0; i < runSettings.size(); i++) {
+            RunSetting get = runSettings.get(i);
+            int id = get.getId();
+            File assFile = new File("ASSIGNMENTS");
+            File files[] = assFile.listFiles();
+            ArrayList<File> complierReqFiles = get.getRunReqFiles();
+            String scriptName = "SCRIPTS/"
+                    + GlobalValues.sessionSettings.getSession_name()
+                    + "-diff-"
+                    + id;
+            if (get.getOS().trim().equalsIgnoreCase("linux")) {
+                scriptName += ".sh";
+
+                write(new File(scriptName),
+                        "#!/bin/bash\ncd \"${1}\"\n diff -u -B -b \"${2}\" \"${3}\"");
+            } else {
+
+            }
+            for (int j = 0; j < files.length; j++) {
+                File file = files[j];
+                if (file.isDirectory()) {
+                    Tools.copyReqFiles(file.getAbsolutePath() + "/", complierReqFiles);
+
+                    Tools.runFiles(executorService, id, "diff", file.getAbsolutePath(), "/bin/bash", scriptName, file.getAbsolutePath(), "run-out-" + id + ".log", get.getSampleOutPutFile().getAbsolutePath());
+                }
+            }
+
+        }
+
+        executorService.shutdown();
+        try {
+            executorService.awaitTermination(120, TimeUnit.SECONDS);
+        } catch (InterruptedException ex) {
+            Logger.getLogger(MainWindow.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+    }
+
+    public void doCompareThis() {
+        showLogArea();
+        ExecutorService executorService = Executors.newFixedThreadPool(2);
+        ArrayList<RunSetting> runSettings = GlobalValues.sessionSettings.getRunSettings();
+        for (int i = 0; i < runSettings.size(); i++) {
+            RunSetting get = runSettings.get(i);
+            int id = get.getId();
+
+            ArrayList<File> complierReqFiles = get.getRunReqFiles();
+            String scriptName = "SCRIPTS/"
+                    + GlobalValues.sessionSettings.getSession_name()
+                    + "-diff-"
+                    + id;
+            if (get.getOS().trim().equalsIgnoreCase("linux")) {
+                scriptName += ".sh";
+
+                write(new File(scriptName),
+                        "#!/bin/bash\ncd \"${1}\"\n diff -u -B -b \"${2}\" \"${3}\"");
+            } else {
+
+            }
+            {
+                File file = new File("ASSIGNMENTS/" + GlobalValues.sessionSettings.getCurrentStudent());
+
+                if (file.isDirectory()) {
+                    Tools.copyReqFiles(file.getAbsolutePath() + "/", complierReqFiles);
+
+                    Tools.runFiles(executorService, id, "diff", file.getAbsolutePath(), "/bin/bash", scriptName, file.getAbsolutePath(), "run-out-" + id + ".log", get.getSampleOutPutFile().getAbsolutePath());
+                }
+            }
+
+        }
+
+        executorService.shutdown();
+        try {
+            executorService.awaitTermination(120, TimeUnit.SECONDS);
+        } catch (InterruptedException ex) {
+            Logger.getLogger(MainWindow.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+    }
+    Stage st = new Stage();
+
+    public void showLogArea() {
+
+        st.setTitle("Log");
+        st.setScene(new Scene(new BorderPane(logArea)));
+        st.show();
+    }
+
+    public static void appendLogToLogArea(String Text) {
+        Platform.runLater(new Runnable() {
+            @Override
+            public void run() {
+                logArea.appendText(Text);
+            }
+        });
+
+    }
+
+    public static void addTab(File selectedFile, int tabcounter) {
+        if (!GlobalValues.listOpenedFiles.isEmpty() && GlobalValues.listOpenedFiles.contains(selectedFile.getAbsolutePath())) {
+            ObservableList<Tab> templs = centerTabPane.getTabs();
+            System.out.println("" + templs);
+            for (int i = 0; i < templs.size(); i++) {
+                System.out.println("" + templs.get(i).getTooltip());
+                if ((templs.get(i).getTooltip() != null) && templs.get(i).getTooltip().getText().equalsIgnoreCase(selectedFile.getAbsolutePath())) {
+                    final int r = i;
+                    Platform.runLater(() -> {
+                        centerTabPane.getSelectionModel().select(r);
+                    });
+                }
+            }
+        } else {
+            textTab[tabcounter] = new Tab(selectedFile.getName());
+
+            textTab[tabcounter].setId("" + tabcounter);
+            textTab[tabcounter].setTooltip(new Tooltip(selectedFile.getAbsolutePath()));
+            textTab[tabcounter].setOnClosed((Event e) -> {
+                GlobalValues.listOpenedFiles.clear();
+                ObservableList<Tab> tl = centerTabPane.getTabs();
+                tl.stream().forEach((tl1) -> {
+                    GlobalValues.listOpenedFiles.add(tl1.getTooltip().getText());
+                });
+            });
+            GlobalValues.listOpenedFiles.add(selectedFile.getAbsolutePath().trim());
+            if (selectedFile.getName().equalsIgnoreCase("feedback")) {
+                FeedbackArea fba = new FeedbackArea(selectedFile.getAbsolutePath());
+                textTab[tabcounter].setContent(fba.getNode());
+            } else {
+                System.out.println("Adding Tab: " + selectedFile.getAbsolutePath());
+                SyntaxTextAreaFX ta = new SyntaxTextAreaFX(selectedFile.getAbsolutePath());
+
+                try (PrintStream out = new PrintStream(selectedFile.getAbsolutePath())) {
+                    out.print(ta.getText());
+                } catch (FileNotFoundException ex) {
+                    Logger.getLogger(MainWindow.class.getName()).log(Level.SEVERE, null, ex);
+                }
+
+                textTab[tabcounter].setContent(ta.getNode());
+            }
+            centerTabPane.getTabs().add(textTab[tabcounter]);
+            IncrementTabcounter();
+        }
+    }
 
     public static void IncrementTabcounter() {
         tabcounter++;

@@ -5,13 +5,10 @@
  */
 package in.co.s13.marking.assistant.ui;
 
-import com.sun.corba.se.impl.orbutil.CorbaResourceUtil;
 import in.co.s13.marking.assistant.meta.CompilerSetting;
-import in.co.s13.marking.assistant.meta.FeedBackEntry;
 import in.co.s13.marking.assistant.meta.GlobalValues;
 import java.io.File;
 import java.util.ArrayList;
-import java.util.List;
 import javafx.application.Application;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -92,6 +89,7 @@ public class CompilerSetupWindow extends Application {
             public void handle(ActionEvent event) {
                 FileChooser jfc = new FileChooser();
                 jfc.setTitle("Choose Files Required");
+                jfc.setInitialDirectory(new File("SOLUTION"));
                 compilerReqFiles.clear();
                 compilerReqFiles.addAll(jfc.showOpenMultipleDialog(primaryStage));
                 StringBuilder sb = new StringBuilder();
@@ -122,11 +120,10 @@ public class CompilerSetupWindow extends Application {
             @Override
             public void handle(ActionEvent event) {
                 String str=compilerCommandTF.getText().trim();
-                if(str.length()<1){
-                str=null;}
+                
                 GlobalValues.compilerSettingsList.add(
                         new CompilerSetting(number, locationCB.getSelectionModel().getSelectedItem(),
-                                null,
+                                str,
                                 osCB.getSelectionModel().getSelectedItem(),
                                 compilerReqFiles));
                 
