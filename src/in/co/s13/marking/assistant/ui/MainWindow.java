@@ -106,7 +106,7 @@ public class MainWindow extends Application implements Runnable {
     public static Tab tab21, tab22, tab23, tab24;
     static Tab filesTab = new Tab("Files");
     static TabPane centerTabPane;
-    public static Tab selectedTab ;//= new Tab[100];
+    public static Tab selectedTab;//= new Tab[100];
     public static ProgressIndicator pi = new ProgressBar();
 
     // public static TreeView tree = new TreeView();
@@ -186,6 +186,16 @@ public class MainWindow extends Application implements Runnable {
         });
         saveAll.setAccelerator(new KeyCodeCombination(KeyCode.S, KeyCombination.SHIFT_DOWN, KeyCombination.CONTROL_DOWN));
         menuFile.getItems().add(saveAll);
+
+        MenuItem reloadAll = new MenuItem("\tReload All");
+        reloadAll.setOnAction(new EventHandler() {
+            public void handle(Event t) {
+                synchroniseUi();
+                refresh();
+            }
+        });
+        reloadAll.setAccelerator(new KeyCodeCombination(KeyCode.F5, KeyCombination.CONTROL_DOWN));
+        menuFile.getItems().add(reloadAll);
 
         MenuItem exit = new MenuItem("\tExit");
         exit.setOnAction(new EventHandler() {
@@ -298,7 +308,7 @@ public class MainWindow extends Application implements Runnable {
             @Override
             public void changed(ObservableValue<? extends Tab> tab, Tab oldTab, final Tab newTab) {
                 if (newTab != null) {
-                    selectedTab=newTab;
+                    selectedTab = newTab;
                     if (newTab.getText() == null) {
                         stage.setTitle("");
 
@@ -347,6 +357,10 @@ public class MainWindow extends Application implements Runnable {
         diffButton.setOnAction((ActionEvent event) -> {
             doCompareThis();
         });
+        Button reloadButton = new Button("Reload");
+        reloadButton.setOnAction((ActionEvent event) -> {
+            refresh();
+        });
         Button nextButton = new Button("Next");
         nextButton.setOnAction((ActionEvent event) -> {
             doNextStudent();
@@ -356,7 +370,7 @@ public class MainWindow extends Application implements Runnable {
         //buttonBar.getChildren().add(leftspace);
         HBox.setHgrow(leftspace, Priority.ALWAYS);
         buttonBar.getChildren().addAll(prevButton, compileButton, runButton,
-                diffButton, nextButton);
+                diffButton, reloadButton, nextButton);
         Region rightspace = new Region();
         rightspace.setMinWidth(50);
 
@@ -491,6 +505,20 @@ public class MainWindow extends Application implements Runnable {
             if (GlobalValues.sessionSettings.getCurrentStudent().equalsIgnoreCase(get.getName()) && i < students.size() - 1) {
                 GlobalValues.sessionSettings.setLastStudentMarked(get.getName());
                 openFilesForStudent(students.get(i + 1));
+
+                break;
+            }
+        }
+    }
+
+    void refresh() {
+        closeAllTabs();
+        ArrayList<File> students = Tools.getDirsInAssignmentDir();
+        for (int i = 0; i < students.size(); i++) {
+            File get = students.get(i);
+            System.out.println("Comparing:" + GlobalValues.sessionSettings.getCurrentStudent() + " with " + get.getName());
+            if (GlobalValues.sessionSettings.getCurrentStudent().equalsIgnoreCase(get.getName())) {
+                openFilesForStudent(get);
 
                 break;
             }
@@ -691,9 +719,18 @@ public class MainWindow extends Application implements Runnable {
         jfc.setTitle("Select Session File");
         jfc.setInitialDirectory(new File("./app/sessions/"));
         File choice = jfc.showOpenDialog(new Stage());
+        if (choice == null) {
+            return;
+        }
         GlobalValues.sessionSettings = (SessionSettings) Tools.readObject(choice.getAbsolutePath());
-        GlobalValues.feedbackDBArray = (ArrayList<FeedBackEntry>) Tools.readObject(("FEEDBACK/" + GlobalValues.sessionSettings.getSession_name() + "-feedback-db.fdb"));
-        GlobalValues.templateFeedback = (ArrayList<FeedBackEntry>) Tools.readObject(("FEEDBACK/" + GlobalValues.sessionSettings.getSession_name() + "-feedback-template.obj"));
+        try {
+            GlobalValues.feedbackDBArray = (ArrayList<FeedBackEntry>) Tools.readObject(("FEEDBACK/" + GlobalValues.sessionSettings.getSession_name() + "-feedback-db.fdb"));
+            GlobalValues.templateFeedback = (ArrayList<FeedBackEntry>) Tools.readObject(("FEEDBACK/" + GlobalValues.sessionSettings.getSession_name() + "-feedback-template.obj"));
+            GlobalValues.defaultTemplateFeedback = (ArrayList<FeedBackEntry>) Tools.readObject(("FEEDBACK/" + GlobalValues.sessionSettings.getSession_name() + "-feedback-default-template.obj"));
+        } catch (Exception e) {
+            Tools.parseFeedbackTemplate();
+        }
+        System.out.println("Last Session" + GlobalValues.sessionSettings);
         if (GlobalValues.sessionSettings.getCurrentStudent().length() < 1) {
             if (GlobalValues.sessionSettings.getLastStudentMarked().length() < 1) {
                 startFromFirstStudent();
@@ -747,9 +784,9 @@ public class MainWindow extends Application implements Runnable {
 
         if (showFeedBackInSeprateWindow) {
             Parent root = feedBackStage.getScene().getRoot();
-            if(root instanceof FeedbackArea){
-            ((FeedbackArea) root).save();
-  
+            if (root instanceof FeedbackArea) {
+                ((FeedbackArea) root).save();
+
             }
         }
 //        PrintStream out = null;
@@ -776,12 +813,12 @@ public class MainWindow extends Application implements Runnable {
 
             }
         }
-        
+
         if (showFeedBackInSeprateWindow) {
             Parent root = feedBackStage.getScene().getRoot();
-            if(root instanceof FeedbackArea){
-            ((FeedbackArea) root).save();
-  
+            if (root instanceof FeedbackArea) {
+                ((FeedbackArea) root).save();
+
             }
         }
     }
@@ -1064,6 +1101,10 @@ public class MainWindow extends Application implements Runnable {
     public static synchronized void addTab(File selectedFile, int tabcounter) {
 
         if (!GlobalValues.listOpenedFiles.isEmpty() && GlobalValues.listOpenedFiles.contains(selectedFile.getAbsolutePath())) {
+            if (selectedFile.getName().equalsIgnoreCase("feedback") && showFeedBackInSeprateWindow) {
+                feedBackStage.show();
+                return;
+            }
             ObservableList<Tab> templs = centerTabPane.getTabs();
 //            System.out.println("" + templs);
             for (int i = 0; i < templs.size(); i++) {
@@ -1076,7 +1117,7 @@ public class MainWindow extends Application implements Runnable {
                 }
             }
         } else {
-           Tab newTab = new Tab(selectedFile.getName());
+            Tab newTab = new Tab(selectedFile.getName());
 
             newTab.setId("" + tabcounter);
             newTab.setTooltip(new Tooltip(selectedFile.getAbsolutePath()));

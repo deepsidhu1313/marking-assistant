@@ -20,7 +20,6 @@ public class GlobalValues {
     public static String OS = System.getProperty("os.name").toLowerCase();
     public static String selectedParentFolder = "", lastSelectedParentFolder = "";
     public static ArrayList<File> dirsInAssignmentFolder = new ArrayList<>();
-    public static ArrayList<FeedBackEntry> feedbackDBArray = new ArrayList<>();
     //public static JSONObject feedbackDBobject = new JSONObject();
     public static File templateFile;
     public static String SESSION_NAME = "";
@@ -28,6 +27,8 @@ public class GlobalValues {
     public static ArrayList<RunSetting> runSettingsList = new ArrayList<>();
     public static SessionSettings sessionSettings;
     public static ArrayList<FeedBackEntry> templateFeedback = new ArrayList<>();
+    public static ArrayList<FeedBackEntry> defaultTemplateFeedback = new ArrayList<>();
+    public static ArrayList<FeedBackEntry> feedbackDBArray = new ArrayList<>();
     public static ArrayList<String> listOpenedFiles = new ArrayList<>();
     public static DataFormat datFormat = new DataFormat("feedback/entry");
     public static SettingsEntry settings = new SettingsEntry();

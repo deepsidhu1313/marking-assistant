@@ -5,8 +5,6 @@
  */
 package in.co.s13.marking.assistant.ui;
 
-import com.sun.javafx.binding.BidirectionalBinding;
-import com.sun.javafx.property.adapter.PropertyDescriptor;
 import in.co.s13.marking.assistant.meta.FeedBackEntry;
 import in.co.s13.marking.assistant.meta.GlobalValues;
 import static in.co.s13.marking.assistant.meta.GlobalValues.datFormat;
@@ -40,23 +38,17 @@ import javafx.scene.control.TabPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.input.ClipboardContent;
-import javafx.scene.input.DataFormat;
 import javafx.scene.input.DragEvent;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.MouseButton;
-import javafx.scene.input.MouseDragEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TransferMode;
-import javafx.scene.layout.Border;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
-import javafx.util.Callback;
-import org.json.JSONObject;
-import org.json.JSONWriter;
 
 /**
  *
@@ -93,6 +85,8 @@ public class FeedbackArea extends BorderPane {
                 lastFocused = 1;
             }
         });
+        feedbackStu.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+
         feedbackStu.setCellFactory(lv -> {
             ListCell<FeedBackEntry> cell = new ListCell<FeedBackEntry>() {
                 @Override
@@ -102,7 +96,13 @@ public class FeedbackArea extends BorderPane {
                         setText("");
                     } else {
                         setText(item.toString());
-                        setTextFill(item.getColor());
+                        if (item.getType() == FeedBackEntry.EntryType.SECTION_END) {
+
+                            setTextFill(Color.CORNFLOWERBLUE);
+                        } else {
+                            setTextFill(item.getColor());
+
+                        }
                         if (item.getType() != FeedBackEntry.EntryType.FEEDBACK) {
                             setStyle(" -fx-font-weight: bold;");
                         }
@@ -173,6 +173,15 @@ public class FeedbackArea extends BorderPane {
                 public void handle(MouseEvent event) {
                     //   itemEnter = feedbackStu.getItems().indexOf(cell.getItem());
                     //  System.out.println("" + itemEnter);
+                    FeedBackEntry fb = cell.getItem();
+                    cell.setText("" + fb.toString());
+                    if (fb.getType() == FeedBackEntry.EntryType.SECTION_END) {
+
+                        cell.setTextFill(Color.CORNFLOWERBLUE);
+                    } else {
+                        cell.setTextFill(fb.getColor());
+
+                    }
                 }
             });
             cell.setOnDragEntered(new EventHandler<DragEvent>() {
@@ -212,8 +221,12 @@ public class FeedbackArea extends BorderPane {
                         });
                         MenuItem remove = new MenuItem("Remove");
                         remove.setOnAction((ActionEvent event1) -> {
-                            int itemno = feedbackStu.getSelectionModel().getSelectedIndex();
-                            feedbackStu.getItems().remove(itemno);
+                            List<FeedBackEntry> items = feedbackStu.getSelectionModel().getSelectedItems();
+                            for (int i = 0; i < items.size(); i++) {
+                                FeedBackEntry get = items.get(i);
+                                feedbackStu.getItems().remove(get);
+
+                            }
 
                         });
                         MenuItem calc = new MenuItem("Calculate");
@@ -225,8 +238,31 @@ public class FeedbackArea extends BorderPane {
                             }
 
                         });
+                        MenuItem incItem = new MenuItem("Increment Score");
+                        incItem.setOnAction((ActionEvent event1) -> {
+                            if (lastFocused == 1) {
+                                List<FeedBackEntry> items = feedbackStu.getSelectionModel().getSelectedItems();
+                                for (int i = 0; i < items.size(); i++) {
+                                    FeedBackEntry get = items.get(i);
+                                    get.setObtainedMarks(get.getObtainedMarks() + 0.25);
+
+                                }
+                            }
+                        });
+
+                        MenuItem decItem = new MenuItem("Decrement Score");
+                        decItem.setOnAction((ActionEvent event1) -> {
+                            if (lastFocused == 1) {
+                                List<FeedBackEntry> items = feedbackStu.getSelectionModel().getSelectedItems();
+                                for (int i = 0; i < items.size(); i++) {
+                                    FeedBackEntry get = items.get(i);
+                                    get.setObtainedMarks(get.getObtainedMarks() - 0.25);
+
+                                }
+                            }
+                        });
                         cm.getItems().clear();
-                        cm.getItems().addAll(moveup, movedown, remove, calc);
+                        cm.getItems().addAll(moveup, movedown, remove, calc, incItem, decItem);
                         cm.show(feedbackStu, event.getScreenX(), event.getScreenY());
 
                     }
@@ -308,11 +344,22 @@ public class FeedbackArea extends BorderPane {
                         setText("");
                     } else {
                         setText(item.toString());
+                        if (item.getType() == FeedBackEntry.EntryType.SECTION_END) {
+
+                            setTextFill(Color.CORNFLOWERBLUE);
+                        } else {
+                            setTextFill(item.getColor());
+
+                        }
+                        if (item.getType() != FeedBackEntry.EntryType.FEEDBACK) {
+                            setStyle(" -fx-font-weight: bold;");
+                        }
                     }
                 }
             };
 
-            cell.setOnDragDetected(event -> {
+            cell.setOnDragDetected(event
+                    -> {
                 if (!cell.isEmpty()) {
                     Dragboard db = cell.startDragAndDrop(TransferMode.COPY);
                     ClipboardContent cc = new ClipboardContent();
@@ -320,17 +367,21 @@ public class FeedbackArea extends BorderPane {
                     db.setContent(cc);
                     dragSource.set(cell);
                 }
-            });
+            }
+            );
 
-            cell.setOnDragOver(event -> {
+            cell.setOnDragOver(event
+                    -> {
                 Dragboard db = event.getDragboard();
                 if (db.hasString()) {
                     event.acceptTransferModes(TransferMode.COPY);
                 }
-            });
+            }
+            );
 
             //cell.setOnDragDone(event -> feedbackDB.getItems().remove(cell.getItem()));
-            cell.setOnDragDropped(event -> {
+            cell.setOnDragDropped(event
+                    -> {
                 Dragboard db = event.getDragboard();
                 if (db.hasContent(datFormat) && dragSource.get() != null) {
                     // in this example you could just do
@@ -344,10 +395,12 @@ public class FeedbackArea extends BorderPane {
                 } else {
                     event.setDropCompleted(false);
                 }
-            });
+            }
+            );
 
             return cell;
-        });
+        }
+        );
         feedbackDB.getItems().addAll(GlobalValues.feedbackDBArray);
         feedbackDB.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 
@@ -438,7 +491,7 @@ public class FeedbackArea extends BorderPane {
                 GlobalValues.feedbackDBArray.add(new FeedBackEntry(itemEnter, maxm, minm, obtm, feedBack, val, et, 0));
                 feedbackDB.getItems().clear();
                 feedbackDB.getItems().addAll(GlobalValues.feedbackDBArray);
-                feedbackDB.getSelectionModel().select(feedbackDB.getItems().size()-1);
+                feedbackDB.getSelectionModel().select(feedbackDB.getItems().size() - 1);
                 maxMTF.setText("");
                 minMTF.setText("");
                 obtMTF.setText("" + Double.MIN_VALUE);
@@ -458,6 +511,7 @@ public class FeedbackArea extends BorderPane {
                 boolean val = dupCB.getSelectionModel().getSelectedItem();
                 FeedBackEntry.EntryType et = typCB.getSelectionModel().getSelectedItem();
                 String feedBack = feedCommTF.getText();
+                int index=feedbackDB.getSelectionModel().getSelectedIndex();
                 FeedBackEntry fbe = feedbackDB.getSelectionModel().getSelectedItem();
                 fbe.setMaximumMarks(maxm);
                 fbe.setMinimumMarks(minm);
@@ -465,7 +519,8 @@ public class FeedbackArea extends BorderPane {
                 fbe.setDuplicateAllowed(val);
                 fbe.setType(et);
                 fbe.setFeedBack(feedBack);
-
+                feedbackDB.getItems().remove(index);
+                feedbackDB.getItems().add(index, fbe);
                 maxMTF.setText("");
                 minMTF.setText("");
                 obtMTF.setText("" + Double.MIN_VALUE);
@@ -500,20 +555,71 @@ public class FeedbackArea extends BorderPane {
 
         GridPane altButtonGP = new GridPane();
 
+        Button incAltButton = new Button("Increment Score");
+        Button decrAltButton = new Button("Decrement Score");
         Button addAltButton = new Button("Add");
         Button remAltButton = new Button("Remove");
         Button upAltButton = new Button("Move Up");
         Button downAltButton = new Button("Move Down");
         Button calcAltButton = new Button("Calculate");
+        Button setThisAsTempAltButton = new Button("Save This feedback As Template");
+        Button resetTemplateAltButton = new Button("Reset Feedback");
+        Button defaultTemplateAltButton = new Button("Load Default Template");
+        Button reParseTemplateAltButton = new Button("Reparse Default Template");
+
+        incAltButton.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                if (lastFocused == 1) {
+                    List<FeedBackEntry> items = feedbackStu.getSelectionModel().getSelectedItems();
+                    for (int i = 0; i < items.size(); i++) {
+                        FeedBackEntry get = items.get(i);
+                        get.setObtainedMarks(get.getObtainedMarks() + 0.25);
+
+                    }
+                }
+                if (lastFocused == 2) {
+                    List<FeedBackEntry> selectedItems = feedbackDB.getSelectionModel().getSelectedItems();
+                    for (int i = 0; i < selectedItems.size(); i++) {
+                        FeedBackEntry get = selectedItems.get(i);
+                        get.setObtainedMarks(get.getObtainedMarks() + 0.25);
+                    }
+                }
+            }
+        });
+        decrAltButton.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                if (lastFocused == 1) {
+                    List<FeedBackEntry> items = feedbackStu.getSelectionModel().getSelectedItems();
+                    for (int i = 0; i < items.size(); i++) {
+                        FeedBackEntry get = items.get(i);
+                        get.setObtainedMarks(get.getObtainedMarks() - 0.25);
+
+                    }
+                }
+                if (lastFocused == 2) {
+                    List<FeedBackEntry> selectedItems = feedbackDB.getSelectionModel().getSelectedItems();
+                    for (int i = 0; i < selectedItems.size(); i++) {
+                        FeedBackEntry get = selectedItems.get(i);
+                        get.setObtainedMarks(get.getObtainedMarks() - 0.25);
+                    }
+                }
+            }
+        });
 
         addAltButton.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
 
                 List<FeedBackEntry> selectedItems = feedbackDB.getSelectionModel().getSelectedItems();
+                int index=feedbackStu.getSelectionModel().getSelectedIndex();
+                if(index<0){
+                index=0;
+                }
                 for (int i = 0; i < selectedItems.size(); i++) {
                     FeedBackEntry get = selectedItems.get(i);
-                    feedbackStu.getItems().add(feedbackStu.getSelectionModel().getSelectedIndex() + i, new FeedBackEntry(feedbackStu.getItems().size(), get));
+                    feedbackStu.getItems().add(index + i, new FeedBackEntry(feedbackStu.getItems().size(), get));
 
                 }
                 //feedbackStu.getItems().add(feedbackStu.getSelectionModel().getSelectedIndex(), new FeedBackEntry(feedbackStu.getItems().size(), feedbackDB.getSelectionModel().getSelectedItem()));
@@ -525,10 +631,20 @@ public class FeedbackArea extends BorderPane {
             @Override
             public void handle(ActionEvent event) {
                 if (lastFocused == 1) {
-                    feedbackStu.getItems().remove(feedbackStu.getSelectionModel().getSelectedIndex());
+                    List<FeedBackEntry> items = feedbackStu.getSelectionModel().getSelectedItems();
+                    for (int i = 0; i < items.size(); i++) {
+                        FeedBackEntry get = items.get(i);
+                        feedbackStu.getItems().remove(get);
+
+                    }
                 }
                 if (lastFocused == 2) {
-                    feedbackDB.getItems().remove(feedbackDB.getSelectionModel().getSelectedIndex());
+                    List<FeedBackEntry> selectedItems = feedbackDB.getSelectionModel().getSelectedItems();
+                    for (int i = 0; i < selectedItems.size(); i++) {
+                        FeedBackEntry get = selectedItems.get(i);
+                        GlobalValues.feedbackDBArray.remove(get);
+                        feedbackDB.getItems().remove(get);
+                    }
                 }
 
             }
@@ -564,7 +680,7 @@ public class FeedbackArea extends BorderPane {
             public void handle(ActionEvent event) {
                 if (lastFocused == 1) {
                     int itemno = feedbackStu.getSelectionModel().getSelectedIndex();
-                    if (itemno < feedbackStu.getItems().size()) {
+                    if (itemno < feedbackStu.getItems().size() - 1) {
                         FeedBackEntry fb = feedbackStu.getItems().get(itemno);
                         feedbackStu.getItems().remove(itemno);
                         feedbackStu.getItems().add(itemno + 1, fb);
@@ -573,7 +689,7 @@ public class FeedbackArea extends BorderPane {
                 }
                 if (lastFocused == 2) {
                     int itemno = feedbackDB.getSelectionModel().getSelectedIndex();
-                    if (itemno < feedbackDB.getItems().size()) {
+                    if (itemno < feedbackDB.getItems().size() - 1) {
                         FeedBackEntry fb = feedbackDB.getItems().get(itemno);
                         feedbackDB.getItems().remove(itemno);
                         feedbackDB.getItems().add(itemno + 1, fb);
@@ -594,11 +710,54 @@ public class FeedbackArea extends BorderPane {
                 }
             }
         });
-        altButtonGP.add(addAltButton, 0, 0);
-        altButtonGP.add(remAltButton, 0, 1);
-        altButtonGP.add(upAltButton, 0, 2);
-        altButtonGP.add(downAltButton, 0, 3);
-        altButtonGP.add(calcAltButton, 0, 4);
+        setThisAsTempAltButton.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                List<FeedBackEntry> list = feedbackStu.getItems();
+                GlobalValues.templateFeedback.clear();
+                for (int i = 0; i < list.size(); i++) {
+                    FeedBackEntry get = list.get(i);
+                    GlobalValues.templateFeedback.add(new FeedBackEntry(i, get));
+                }
+                Tools.writeObject(("FEEDBACK/" + GlobalValues.sessionSettings.getSession_name() + "-feedback-template.obj"), GlobalValues.templateFeedback);
+
+            }
+        });
+
+        resetTemplateAltButton.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                feedbackStu.getItems().clear();
+                feedbackStu.getItems().addAll(GlobalValues.templateFeedback);
+
+            }
+        });
+
+        defaultTemplateAltButton.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                feedbackStu.getItems().clear();
+                feedbackStu.getItems().addAll(GlobalValues.defaultTemplateFeedback);
+
+            }
+        });
+        reParseTemplateAltButton.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                Tools.parseFeedbackTemplate();
+            }
+        });
+        altButtonGP.add(incAltButton, 0, 0);
+        altButtonGP.add(decrAltButton, 0, 1);
+        altButtonGP.add(addAltButton, 0, 2);
+        altButtonGP.add(remAltButton, 0, 3);
+        altButtonGP.add(upAltButton, 0, 4);
+        altButtonGP.add(downAltButton, 0, 5);
+        altButtonGP.add(calcAltButton, 0, 6);
+        altButtonGP.add(setThisAsTempAltButton, 0, 7);
+        altButtonGP.add(resetTemplateAltButton, 0, 8);
+        altButtonGP.add(defaultTemplateAltButton, 0, 9);
+        altButtonGP.add(reParseTemplateAltButton, 0, 10);
         altButtonGP.setAlignment(Pos.CENTER);
         altButtonGP.setVgap(15);
         grid.getColumnConstraints().add(column1);
@@ -656,7 +815,9 @@ public class FeedbackArea extends BorderPane {
         ObservableList<FeedBackEntry> items = feedbackStu.getItems();
         for (int i = 0; i < items.size(); i++) {
             FeedBackEntry get = items.get(i);
-            sb.append(get.toString() + "\n");
+            if (get.getType() != FeedBackEntry.EntryType.SECTION_END) {
+                sb.append(get.toString() + "\n");
+            }
         }
         synTA.setText(sb.toString());
     }
@@ -669,10 +830,11 @@ public class FeedbackArea extends BorderPane {
             if (get.getType() == FeedBackEntry.EntryType.SECTION_START) {
                 indent++;
             }
+            get.setIndent(indent);
             if (get.getType() == FeedBackEntry.EntryType.SECTION_END) {
                 indent--;
             }
-            get.setIndent(indent);
+
         }
         setFeedBackToTextArea();
     }
@@ -683,23 +845,36 @@ public class FeedbackArea extends BorderPane {
         double score = 0;
         for (int i = items.indexOf(fb); i < items.size(); i++) {
             FeedBackEntry get = items.get(i);
+            System.out.println("Parent : " + fb + " Child:" + get);
             if (get.equals(fb)) {
                 continue;
             }
             if (get.getType() == FeedBackEntry.EntryType.SECTION_END) {
                 sectioncounter--;
             }
+            if (get.getType() == FeedBackEntry.EntryType.SECTION_START) {
+                sectioncounter++;
+            }
             if (sectioncounter == 0) {
                 break;
             }
 
-            if (get.getType() == FeedBackEntry.EntryType.SECTION_START) {
-                sectioncounter++;
+            if (get.getType() == FeedBackEntry.EntryType.SECTION_START && !hasNoChildren(get)) {
+                // sectioncounter++;
                 score += calculateMarks(get);
+                i = getSectionEndIndex(get) - 1;
+            } else if (get.getType() == FeedBackEntry.EntryType.SECTION_START && hasNoChildren(get)) {
+                //sectioncounter++;
+                score += (get.getObtainedMarks());
             } else if (get.getType() == FeedBackEntry.EntryType.FEEDBACK) {
-                score += calculateMarks(get);
+                score += (get.getObtainedMarks());
+                // System.out.println("Score for " + get);
             }
         }
+        if (!hasNoChildren(fb)) {
+            fb.setObtainedMarks(score);
+        }
+        System.out.println("Score for " + fb);
         return score;
     }
 
@@ -709,6 +884,40 @@ public class FeedbackArea extends BorderPane {
 
     public void setFeedBackFile(File feedBackFile) {
         this.feedBackFile = feedBackFile;
+    }
+
+    private boolean hasNoChildren(FeedBackEntry fb) {
+        ObservableList<FeedBackEntry> items = feedbackStu.getItems();
+        if (fb.getType() == FeedBackEntry.EntryType.SECTION_START) {
+            if (items.get(items.indexOf(fb) + 1).getType() == FeedBackEntry.EntryType.SECTION_END) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private int getSectionEndIndex(FeedBackEntry fb) {
+        ObservableList<FeedBackEntry> items = feedbackStu.getItems();
+        int sectioncounter = 1, index = Integer.MIN_VALUE;
+        for (int i = items.indexOf(fb) + 1; i < items.size(); i++) {
+            FeedBackEntry get = items.get(i);
+            // System.out.println("Parent : " + fb + " Child:" + get);
+            if (get.equals(fb)) {
+                continue;
+            }
+            if (get.getType() == FeedBackEntry.EntryType.SECTION_END) {
+                sectioncounter--;
+            }
+            if (get.getType() == FeedBackEntry.EntryType.SECTION_START) {
+                sectioncounter++;
+            }
+            if (sectioncounter == 0) {
+                index = i;
+                break;
+            }
+        }
+        //System.out.println("Section "+fb+" starts at :"+items.indexOf(fb)+" ends at "+index);
+        return index;
     }
 
 }

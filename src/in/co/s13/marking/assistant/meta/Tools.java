@@ -705,8 +705,11 @@ public class Tools {
                         FeedBackEntry fbe = new FeedBackEntry(i, maxm, minm, 0, commentString, true, FeedBackEntry.EntryType.SECTION_START, 0);
                         GlobalValues.feedbackDBArray.add(fbe);
                         GlobalValues.templateFeedback.add(fbe);
+                        GlobalValues.defaultTemplateFeedback.add(fbe);
+
                         FeedBackEntry endSection2 = new FeedBackEntry(i, 0, 0, 0, "Section End", true, FeedBackEntry.EntryType.SECTION_END, 0);
                         GlobalValues.templateFeedback.add(endSection2);
+                        GlobalValues.defaultTemplateFeedback.add(endSection2);
 
                     }
                 }
@@ -715,6 +718,7 @@ public class Tools {
             // GlobalValues.feedbackDBobject.put("DB", GlobalValues.feedbackDBArray);
             writeObject(("FEEDBACK/" + GlobalValues.sessionSettings.getSession_name() + "-feedback-db.fdb"), GlobalValues.feedbackDBArray);
             writeObject(("FEEDBACK/" + GlobalValues.sessionSettings.getSession_name() + "-feedback-template.obj"), GlobalValues.templateFeedback);
+            writeObject(("FEEDBACK/" + GlobalValues.sessionSettings.getSession_name() + "-feedback-default-template.obj"), GlobalValues.defaultTemplateFeedback);
 
         } catch (IOException ex) {
             Logger.getLogger(Tools.class.getName()).log(Level.SEVERE, null, ex);

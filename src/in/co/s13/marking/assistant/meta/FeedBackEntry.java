@@ -76,6 +76,8 @@ public class FeedBackEntry implements Serializable {
         if (obtainedMarks < minimumMarks) {
             this.obtainedMarks = minimumMarks;
 
+        } else if (obtainedMarks > maximumMarks) {
+            this.obtainedMarks = maximumMarks;
         } else {
             this.obtainedMarks = obtainedMarks;
         }
@@ -141,6 +143,10 @@ public class FeedBackEntry implements Serializable {
 
     }
 
+    public double getDiff() {
+        return getMaximumMarks() - getObtainedMarks();
+    }
+
     @Override
     public boolean equals(Object obj) {
         if (this == obj) {
@@ -178,9 +184,27 @@ public class FeedBackEntry implements Serializable {
     public String toString() {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < indent; i++) {
-            sb.append(" ");
+            sb.append("     ");
         }
-        sb.append("[" + "").append(obtainedMarks).append("/").append(maximumMarks).append("]" + " ").append(feedBack);
+        if (this.type == EntryType.FEEDBACK) {
+            sb.append("     ");
+        }
+        StringBuilder formattedFeedback = new StringBuilder();
+        if (feedBack.contains("\n")) {
+            String feedBackLines[] = feedBack.split("\n");
+            for (int i = 0; i < feedBackLines.length; i++) {
+                String feedBackLine = feedBackLines[i];
+                if (i == 0) {
+                    formattedFeedback.append(feedBackLine).append("\n");
+                } else {
+                    formattedFeedback.append(sb.toString()).append(feedBackLine).append("\n");
+                }
+            }
+        } else {
+            formattedFeedback.append(feedBack);
+
+        }
+        sb.append("[" + "").append(obtainedMarks).append("/").append(maximumMarks).append("]" + " ").append(formattedFeedback.toString());
         return sb.toString();
     }
 
@@ -207,45 +231,43 @@ public class FeedBackEntry implements Serializable {
         feedBack = obj.getString("feedBack");
     }
 
-    
-    
     enum FeedBackEntryComparator implements Comparator<FeedBackEntry> {
 
         FEEDBACK_SORT {
-                    public int compare(FeedBackEntry o1, FeedBackEntry o2) {
-                        return o1.getFeedBack().compareTo(o2.getFeedBack());
-                    }
-                },
+            public int compare(FeedBackEntry o1, FeedBackEntry o2) {
+                return o1.getFeedBack().compareTo(o2.getFeedBack());
+            }
+        },
         ID_SORT {
-                    public int compare(FeedBackEntry o1, FeedBackEntry o2) {
-                        return Integer.valueOf(o1.getId()).compareTo(o2.getId());
-                    }
-                },
+            public int compare(FeedBackEntry o1, FeedBackEntry o2) {
+                return Integer.valueOf(o1.getId()).compareTo(o2.getId());
+            }
+        },
         INDENT_SORT {
-                    public int compare(FeedBackEntry o1, FeedBackEntry o2) {
-                        return Integer.valueOf(o1.getIndent()).compareTo(o2.getIndent());
-                    }
-                },
+            public int compare(FeedBackEntry o1, FeedBackEntry o2) {
+                return Integer.valueOf(o1.getIndent()).compareTo(o2.getIndent());
+            }
+        },
         MAX_MARKS_SORT {
-                    public int compare(FeedBackEntry o1, FeedBackEntry o2) {
-                        return Double.valueOf(o1.getMaximumMarks()).compareTo(o2.getMaximumMarks());
-                    }
-                },
+            public int compare(FeedBackEntry o1, FeedBackEntry o2) {
+                return Double.valueOf(o1.getMaximumMarks()).compareTo(o2.getMaximumMarks());
+            }
+        },
         MIN_MARKS_SORT {
-                    public int compare(FeedBackEntry o1, FeedBackEntry o2) {
-                        return Double.valueOf(o1.getMinimumMarks()).compareTo(o2.getMinimumMarks());
-                    }
-                },
+            public int compare(FeedBackEntry o1, FeedBackEntry o2) {
+                return Double.valueOf(o1.getMinimumMarks()).compareTo(o2.getMinimumMarks());
+            }
+        },
         OBT_MARKS_SORT {
-                    public int compare(FeedBackEntry o1, FeedBackEntry o2) {
-                        return Double.valueOf(o1.getObtainedMarks()).compareTo(o2.getObtainedMarks());
-                    }
-                },
+            public int compare(FeedBackEntry o1, FeedBackEntry o2) {
+                return Double.valueOf(o1.getObtainedMarks()).compareTo(o2.getObtainedMarks());
+            }
+        },
         TYPE_SORT {
-                    public int compare(FeedBackEntry o1, FeedBackEntry o2) {
-                        return (o1.getType()).compareTo(o2.getType());
-                    }
-                };
+            public int compare(FeedBackEntry o1, FeedBackEntry o2) {
+                return (o1.getType()).compareTo(o2.getType());
+            }
+        };
 
         public static Comparator<FeedBackEntry> decending(final Comparator<FeedBackEntry> other) {
             return new Comparator<FeedBackEntry>() {
@@ -269,7 +291,5 @@ public class FeedBackEntry implements Serializable {
             };
         }
     }
-    
-    
-    
+
 }
