@@ -18,3 +18,4 @@ FEEDBACK
 app
 /nbproject/private/
 /dist/
+build/*

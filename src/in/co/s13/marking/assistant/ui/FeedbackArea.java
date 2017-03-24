@@ -265,6 +265,8 @@ public class FeedbackArea extends BorderPane {
                         cm.getItems().addAll(moveup, movedown, remove, calc, incItem, decItem);
                         cm.show(feedbackStu, event.getScreenX(), event.getScreenY());
 
+                    } else if (cm != null && cm.isShowing()) {
+                        cm.hide();
                     }
                 }
             });
@@ -319,7 +321,12 @@ public class FeedbackArea extends BorderPane {
         if (feedBackFile.exists()) {
             feedbackStu.getItems().addAll((ArrayList<FeedBackEntry>) Tools.readObject(feedBackFile.getAbsolutePath()));
         } else {
-            feedbackStu.getItems().addAll(GlobalValues.templateFeedback);
+            ArrayList<FeedBackEntry> list = GlobalValues.templateFeedback;
+            for (int i = 0; i < list.size(); i++) {
+                FeedBackEntry get = list.get(i);
+                feedbackStu.getItems().add(new FeedBackEntry(i, get));
+            }
+
         }
         VBox templateVBox = new VBox(10);
         Label templateLabel = new Label("Drag Feedbacks from here");
@@ -511,7 +518,7 @@ public class FeedbackArea extends BorderPane {
                 boolean val = dupCB.getSelectionModel().getSelectedItem();
                 FeedBackEntry.EntryType et = typCB.getSelectionModel().getSelectedItem();
                 String feedBack = feedCommTF.getText();
-                int index=feedbackDB.getSelectionModel().getSelectedIndex();
+                int index = feedbackDB.getSelectionModel().getSelectedIndex();
                 FeedBackEntry fbe = feedbackDB.getSelectionModel().getSelectedItem();
                 fbe.setMaximumMarks(maxm);
                 fbe.setMinimumMarks(minm);
@@ -557,16 +564,19 @@ public class FeedbackArea extends BorderPane {
 
         Button incAltButton = new Button("Increment Score");
         Button decrAltButton = new Button("Decrement Score");
+        Button giveZeroAltButton = new Button("Give 0 Score");
+        Button giveFullAltButton = new Button("Give Full Score");
         Button addAltButton = new Button("Add");
         Button remAltButton = new Button("Remove");
         Button upAltButton = new Button("Move Up");
         Button downAltButton = new Button("Move Down");
         Button calcAltButton = new Button("Calculate");
         Button setThisAsTempAltButton = new Button("Save This feedback As Template");
-        Button resetTemplateAltButton = new Button("Reset Feedback");
+        Button resetTemplateAltButton = new Button("Reset Feedback To Template");
         Button defaultTemplateAltButton = new Button("Load Default Template");
         Button reParseTemplateAltButton = new Button("Reparse Default Template");
-
+        defaultTemplateAltButton.setTextFill(Color.RED);
+        reParseTemplateAltButton.setTextFill(Color.RED);
         incAltButton.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
@@ -608,14 +618,56 @@ public class FeedbackArea extends BorderPane {
             }
         });
 
+        giveZeroAltButton.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                if (lastFocused == 1) {
+                    List<FeedBackEntry> items = feedbackStu.getSelectionModel().getSelectedItems();
+                    for (int i = 0; i < items.size(); i++) {
+                        FeedBackEntry get = items.get(i);
+                        get.setObtainedMarks(0);
+
+                    }
+                }
+                if (lastFocused == 2) {
+                    List<FeedBackEntry> selectedItems = feedbackDB.getSelectionModel().getSelectedItems();
+                    for (int i = 0; i < selectedItems.size(); i++) {
+                        FeedBackEntry get = selectedItems.get(i);
+                        get.setObtainedMarks(0);
+                    }
+                }
+            }
+        });
+
+        giveFullAltButton.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                if (lastFocused == 1) {
+                    List<FeedBackEntry> items = feedbackStu.getSelectionModel().getSelectedItems();
+                    for (int i = 0; i < items.size(); i++) {
+                        FeedBackEntry get = items.get(i);
+                        get.setObtainedMarks(get.getMaximumMarks());
+
+                    }
+                }
+                if (lastFocused == 2) {
+                    List<FeedBackEntry> selectedItems = feedbackDB.getSelectionModel().getSelectedItems();
+                    for (int i = 0; i < selectedItems.size(); i++) {
+                        FeedBackEntry get = selectedItems.get(i);
+                        get.setObtainedMarks(get.getMaximumMarks());
+                    }
+                }
+            }
+        });
+
         addAltButton.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
 
                 List<FeedBackEntry> selectedItems = feedbackDB.getSelectionModel().getSelectedItems();
-                int index=feedbackStu.getSelectionModel().getSelectedIndex();
-                if(index<0){
-                index=0;
+                int index = feedbackStu.getSelectionModel().getSelectedIndex();
+                if (index < 0) {
+                    index = 0;
                 }
                 for (int i = 0; i < selectedItems.size(); i++) {
                     FeedBackEntry get = selectedItems.get(i);
@@ -700,28 +752,21 @@ public class FeedbackArea extends BorderPane {
             }
         });
 
-        calcAltButton.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-                if (feedbackStu.getItems().size() > 0) {
-                    setIndent();
-
-                    calculateMarks(feedbackStu.getItems().get(0));
-                }
+        calcAltButton.setOnAction((ActionEvent event) -> {
+            if (feedbackStu.getItems().size() > 0) {
+                
+                calculateMarks(feedbackStu.getItems().get(0));
+                setIndent();
             }
         });
-        setThisAsTempAltButton.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-                List<FeedBackEntry> list = feedbackStu.getItems();
-                GlobalValues.templateFeedback.clear();
-                for (int i = 0; i < list.size(); i++) {
-                    FeedBackEntry get = list.get(i);
-                    GlobalValues.templateFeedback.add(new FeedBackEntry(i, get));
-                }
-                Tools.writeObject(("FEEDBACK/" + GlobalValues.sessionSettings.getSession_name() + "-feedback-template.obj"), GlobalValues.templateFeedback);
-
+        setThisAsTempAltButton.setOnAction((ActionEvent event) -> {
+            List<FeedBackEntry> list = feedbackStu.getItems();
+            GlobalValues.templateFeedback.clear();
+            for (int i = 0; i < list.size(); i++) {
+                FeedBackEntry get = list.get(i);
+                GlobalValues.templateFeedback.add(new FeedBackEntry(i, get));
             }
+            Tools.writeObject(("FEEDBACK/" + GlobalValues.sessionSettings.getSession_name() + "-feedback-template.obj"), GlobalValues.templateFeedback);
         });
 
         resetTemplateAltButton.setOnAction(new EventHandler<ActionEvent>() {
@@ -747,17 +792,28 @@ public class FeedbackArea extends BorderPane {
                 Tools.parseFeedbackTemplate();
             }
         });
-        altButtonGP.add(incAltButton, 0, 0);
-        altButtonGP.add(decrAltButton, 0, 1);
-        altButtonGP.add(addAltButton, 0, 2);
-        altButtonGP.add(remAltButton, 0, 3);
-        altButtonGP.add(upAltButton, 0, 4);
-        altButtonGP.add(downAltButton, 0, 5);
-        altButtonGP.add(calcAltButton, 0, 6);
-        altButtonGP.add(setThisAsTempAltButton, 0, 7);
-        altButtonGP.add(resetTemplateAltButton, 0, 8);
-        altButtonGP.add(defaultTemplateAltButton, 0, 9);
-        altButtonGP.add(reParseTemplateAltButton, 0, 10);
+        Label marksLabel = new Label("Marks");
+        marksLabel.setStyle(" -fx-font-weight: bold;");
+        altButtonGP.add(marksLabel, 0, 0);
+        altButtonGP.add(incAltButton, 0, 1);
+        altButtonGP.add(decrAltButton, 0, 2);
+        altButtonGP.add(giveZeroAltButton, 0, 3);
+        altButtonGP.add(giveFullAltButton, 0, 4);
+        Label feedbackLabel = new Label("Feedback");
+        feedbackLabel.setStyle(" -fx-font-weight: bold;");
+        altButtonGP.add(feedbackLabel, 0, 5);
+        altButtonGP.add(addAltButton, 0, 6);
+        altButtonGP.add(remAltButton, 0, 7);
+        altButtonGP.add(upAltButton, 0, 8);
+        altButtonGP.add(downAltButton, 0, 9);
+        altButtonGP.add(calcAltButton, 0, 10);
+        Label tempControlLabel = new Label("Template Controls");
+        tempControlLabel.setStyle(" -fx-font-weight: bold;");
+        altButtonGP.add(tempControlLabel, 0, 11);
+        altButtonGP.add(setThisAsTempAltButton, 0, 12);
+        altButtonGP.add(resetTemplateAltButton, 0, 13);
+        altButtonGP.add(defaultTemplateAltButton, 0, 14);
+        altButtonGP.add(reParseTemplateAltButton, 0, 15);
         altButtonGP.setAlignment(Pos.CENTER);
         altButtonGP.setVgap(15);
         grid.getColumnConstraints().add(column1);

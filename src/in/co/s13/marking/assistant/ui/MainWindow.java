@@ -487,6 +487,7 @@ public class MainWindow extends Application implements Runnable {
             System.out.println("Comparing:" + GlobalValues.sessionSettings.getCurrentStudent() + " with " + get.getName());
             if (GlobalValues.sessionSettings.getCurrentStudent().equalsIgnoreCase(get.getName()) && i > 0) {
                 GlobalValues.sessionSettings.setLastStudentMarked(get.getName());
+                FilesTree.collapseFolder(get);
 
                 openFilesForStudent(students.get(i - 1));
 
@@ -504,6 +505,7 @@ public class MainWindow extends Application implements Runnable {
             System.out.println("Comparing:" + GlobalValues.sessionSettings.getCurrentStudent() + " with " + get.getName());
             if (GlobalValues.sessionSettings.getCurrentStudent().equalsIgnoreCase(get.getName()) && i < students.size() - 1) {
                 GlobalValues.sessionSettings.setLastStudentMarked(get.getName());
+                FilesTree.collapseFolder(get);
                 openFilesForStudent(students.get(i + 1));
 
                 break;
@@ -550,7 +552,9 @@ public class MainWindow extends Application implements Runnable {
             addTab(new File(get.getAbsolutePath() + "/feedback"), tabcounter.get());
         }
         GlobalValues.sessionSettings.setCurrentStudent(get.getName());
-
+        FilesTree.expandFolder(get);
+        synchroniseUi();
+        FilesTree.scrollTo(get);
     }
 
     void startFromFirstStudent() {
@@ -1023,7 +1027,7 @@ public class MainWindow extends Application implements Runnable {
                 if (file.isDirectory()) {
                     Tools.copyReqFiles(file.getAbsolutePath() + "/", complierReqFiles);
 
-                    Tools.runFiles(executorService, id, "diff", file.getAbsolutePath(), "/bin/bash", scriptName, file.getAbsolutePath(), "run-out-" + id + ".log", get.getSampleOutPutFile().getAbsolutePath());
+                    Tools.runFiles(executorService, id, "diff", file.getAbsolutePath(), "/bin/bash", scriptName, file.getAbsolutePath(), get.getSampleOutPutFile().getAbsolutePath(), "run-out-" + id + ".log");
                 }
             }
 
@@ -1065,7 +1069,7 @@ public class MainWindow extends Application implements Runnable {
                 if (file.isDirectory()) {
                     Tools.copyReqFiles(file.getAbsolutePath() + "/", complierReqFiles);
 
-                    Tools.runFiles(executorService, id, "diff", file.getAbsolutePath(), "/bin/bash", scriptName, file.getAbsolutePath(), "run-out-" + id + ".log", get.getSampleOutPutFile().getAbsolutePath());
+                    Tools.runFiles(executorService, id, "diff", file.getAbsolutePath(), "/bin/bash", scriptName, file.getAbsolutePath(), get.getSampleOutPutFile().getAbsolutePath(), "run-out-" + id + ".log");
                 }
             }
 
