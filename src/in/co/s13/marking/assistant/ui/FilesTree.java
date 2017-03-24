@@ -170,7 +170,7 @@ public class FilesTree implements Runnable {
                                         if (!expandedDirs.contains(source2)) {
                                             expandedDirs.add(source2);
                                         }
-                                  //      System.out.println("" + source2);
+                                        //      System.out.println("" + source2);
 
                                     }
                                 }
@@ -256,7 +256,7 @@ public class FilesTree implements Runnable {
     }
 
     public static void expandFolder(File dir) {
-      //  System.out.println("Expanding: " + dir);
+        //  System.out.println("Expanding: " + dir);
         if (!expandedDirs.contains(dir)) {
             expandedDirs.add(dir);
         }
@@ -264,14 +264,14 @@ public class FilesTree implements Runnable {
     }
 
     public static void collapseFolder(File dir) {
-      //  System.out.println("Expanding: " + dir);
+        //  System.out.println("Expanding: " + dir);
         expandedDirs.remove(dir);
 
     }
 
     public static void scrollTo(File dir) {
         tv.scrollTo(tv.getRoot().getChildren().indexOf(new TreeItem<File>(dir)));
-    tv.getSelectionModel().select(new TreeItem<File>(dir));
+        tv.getSelectionModel().select(new TreeItem<File>(dir));
     }
 
     public static Image getIcon(File F) {
@@ -281,10 +281,23 @@ public class FilesTree implements Runnable {
             fileExtension = F.getName().substring(F.getName().lastIndexOf(".") + 1).toLowerCase();
         }
         switch (fileExtension) {
+            case "class":
+                fileImage = new Image(ClassLoader.getSystemResourceAsStream("icons/class.png"));
+                break;
+            case "diff":
+                fileImage = new Image(ClassLoader.getSystemResourceAsStream("icons/diff.png"));
+                break;
             case "java":
                 fileImage = new Image(ClassLoader.getSystemResourceAsStream("icons/java.png"));
-
                 break;
+            case "log":
+                fileImage = new Image(ClassLoader.getSystemResourceAsStream("icons/log.png"));
+                break;
+            case "txt":
+            case "text":
+                fileImage = new Image(ClassLoader.getSystemResourceAsStream("icons/text.png"));
+                break;
+
         }
 
         return fileImage;

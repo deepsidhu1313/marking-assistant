@@ -46,7 +46,9 @@ import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 
@@ -467,13 +469,20 @@ public class FeedbackArea extends BorderPane {
         grid.add(typCB, 1, 5);
 
         Button addButton = new Button("Add");
-
+addButton.setMaxWidth(Double.MAX_VALUE);
         Button clearButton = new Button("Clear");
-        grid.add(addButton, 0, 6);
-        grid.add(clearButton, 1, 6);
+        clearButton.setMaxWidth(Double.MAX_VALUE);
+//        grid.add(addButton, 0, 6);
+//        grid.add(clearButton, 1, 6);
         Button updateButton = new Button("Update");
-        grid.add(updateButton, 0, 7);
-
+        updateButton.setMaxWidth(Double.MAX_VALUE);
+//        grid.add(updateButton, 0, 7);
+        grid.setPadding(new Insets(10, 10, 10, 10));
+        HBox feedBackDBButtonHBox= new HBox(10);
+        feedBackDBButtonHBox.getChildren().addAll(addButton,clearButton,updateButton);
+        feedBackDBButtonHBox.setAlignment(Pos.CENTER);
+        feedBackDBButtonHBox.setPadding(new Insets(0, 10, 10, 10));
+        
         clearButton.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
@@ -528,6 +537,7 @@ public class FeedbackArea extends BorderPane {
                 fbe.setFeedBack(feedBack);
                 feedbackDB.getItems().remove(index);
                 feedbackDB.getItems().add(index, fbe);
+                feedbackDB.getSelectionModel().clearAndSelect(index);
                 maxMTF.setText("");
                 minMTF.setText("");
                 obtMTF.setText("" + Double.MIN_VALUE);
@@ -554,7 +564,7 @@ public class FeedbackArea extends BorderPane {
                     }
                 });
 
-        templateVBox.getChildren().addAll(templateLabel, feedbackDB, addNewFeedBack, grid);
+        templateVBox.getChildren().addAll(templateLabel, feedbackDB, addNewFeedBack, grid,feedBackDBButtonHBox);
         templateVBox.setAlignment(Pos.CENTER);
         studentVBox.setAlignment(Pos.CENTER);
         VBox.setVgrow(feedbackDB, Priority.ALWAYS);
@@ -754,7 +764,7 @@ public class FeedbackArea extends BorderPane {
 
         calcAltButton.setOnAction((ActionEvent event) -> {
             if (feedbackStu.getItems().size() > 0) {
-                
+
                 calculateMarks(feedbackStu.getItems().get(0));
                 setIndent();
             }
@@ -794,26 +804,68 @@ public class FeedbackArea extends BorderPane {
         });
         Label marksLabel = new Label("Marks");
         marksLabel.setStyle(" -fx-font-weight: bold;");
-        altButtonGP.add(marksLabel, 0, 0);
-        altButtonGP.add(incAltButton, 0, 1);
-        altButtonGP.add(decrAltButton, 0, 2);
-        altButtonGP.add(giveZeroAltButton, 0, 3);
-        altButtonGP.add(giveFullAltButton, 0, 4);
         Label feedbackLabel = new Label("Feedback");
         feedbackLabel.setStyle(" -fx-font-weight: bold;");
-        altButtonGP.add(feedbackLabel, 0, 5);
-        altButtonGP.add(addAltButton, 0, 6);
-        altButtonGP.add(remAltButton, 0, 7);
-        altButtonGP.add(upAltButton, 0, 8);
-        altButtonGP.add(downAltButton, 0, 9);
-        altButtonGP.add(calcAltButton, 0, 10);
         Label tempControlLabel = new Label("Template Controls");
         tempControlLabel.setStyle(" -fx-font-weight: bold;");
-        altButtonGP.add(tempControlLabel, 0, 11);
-        altButtonGP.add(setThisAsTempAltButton, 0, 12);
-        altButtonGP.add(resetTemplateAltButton, 0, 13);
-        altButtonGP.add(defaultTemplateAltButton, 0, 14);
-        altButtonGP.add(reParseTemplateAltButton, 0, 15);
+        VBox controlsVBox = new VBox(10);
+//        altButtonGP.add(marksLabel, 0, 0);
+//        altButtonGP.add(incAltButton, 0, 1);
+//        altButtonGP.add(decrAltButton, 0, 2);
+//        altButtonGP.add(giveZeroAltButton, 0, 3);
+//        altButtonGP.add(giveFullAltButton, 0, 4);
+//        altButtonGP.add(feedbackLabel, 0, 5);
+//        altButtonGP.add(addAltButton, 0, 6);
+//        altButtonGP.add(remAltButton, 0, 7);
+//        altButtonGP.add(upAltButton, 0, 8);
+//        altButtonGP.add(downAltButton, 0, 9);
+//        altButtonGP.add(calcAltButton, 0, 10);
+//        altButtonGP.add(tempControlLabel, 0, 11);
+//        altButtonGP.add(setThisAsTempAltButton, 0, 12);
+//        altButtonGP.add(resetTemplateAltButton, 0, 13);
+//        altButtonGP.add(defaultTemplateAltButton, 0, 14);
+//        altButtonGP.add(reParseTemplateAltButton, 0, 15);
+
+       
+        //marksLabel.setMaxWidth(Double.MAX_VALUE);
+        incAltButton.setMaxWidth(Double.MAX_VALUE);
+        decrAltButton.setMaxWidth(Double.MAX_VALUE);
+        giveZeroAltButton.setMaxWidth(Double.MAX_VALUE);
+        giveFullAltButton.setMaxWidth(Double.MAX_VALUE);
+        //feedbackLabel.setMaxWidth(Double.MAX_VALUE);
+        addAltButton.setMaxWidth(Double.MAX_VALUE);
+        remAltButton.setMaxWidth(Double.MAX_VALUE);
+        upAltButton.setMaxWidth(Double.MAX_VALUE);
+        downAltButton.setMaxWidth(Double.MAX_VALUE);
+        calcAltButton.setMaxWidth(Double.MAX_VALUE);
+        //tempControlLabel.setMaxWidth(Double.MAX_VALUE);
+        setThisAsTempAltButton.setMaxWidth(Double.MAX_VALUE);
+        resetTemplateAltButton.setMaxWidth(Double.MAX_VALUE);
+        defaultTemplateAltButton.setMaxWidth(Double.MAX_VALUE);
+        reParseTemplateAltButton.setMaxWidth(Double.MAX_VALUE);
+        Region reg= new Region();
+        reg.setMinHeight(10);
+        Region reg2= new Region();
+        reg2.setMinHeight(10);
+        controlsVBox.getChildren().addAll(marksLabel, incAltButton,
+                decrAltButton,
+                giveZeroAltButton,
+                giveFullAltButton,
+                reg,feedbackLabel,
+                addAltButton,
+                remAltButton,
+                upAltButton,
+                downAltButton,
+                calcAltButton,
+                reg2,tempControlLabel,
+                setThisAsTempAltButton,
+                resetTemplateAltButton,
+                defaultTemplateAltButton,
+                reParseTemplateAltButton);
+        
+        
+        controlsVBox.setAlignment(Pos.CENTER);
+        altButtonGP.add(controlsVBox, 0, 0);
         altButtonGP.setAlignment(Pos.CENTER);
         altButtonGP.setVgap(15);
         grid.getColumnConstraints().add(column1);
@@ -869,8 +921,13 @@ public class FeedbackArea extends BorderPane {
         synTA.setText("");
         StringBuilder sb = new StringBuilder();
         ObservableList<FeedBackEntry> items = feedbackStu.getItems();
+        int prevIndent = -1;
         for (int i = 0; i < items.size(); i++) {
             FeedBackEntry get = items.get(i);
+            if (get.getIndent() < prevIndent) {
+                sb.append("\n");
+            }
+            prevIndent = get.getIndent();
             if (get.getType() != FeedBackEntry.EntryType.SECTION_END) {
                 sb.append(get.toString() + "\n");
             }

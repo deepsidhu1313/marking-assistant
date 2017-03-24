@@ -204,7 +204,10 @@ public class FeedBackEntry implements Serializable {
             formattedFeedback.append(feedBack);
 
         }
-        sb.append("[" + "").append(obtainedMarks).append("/").append(maximumMarks).append("]" + " ").append(formattedFeedback.toString());
+        if (!(this.type == EntryType.FEEDBACK && maximumMarks == 0 && minimumMarks == 0)) {
+            sb.append("[" + "").append(obtainedMarks).append("/").append(maximumMarks).append("]" + " ");
+        }
+        sb.append(formattedFeedback.toString());
         return sb.toString();
     }
 

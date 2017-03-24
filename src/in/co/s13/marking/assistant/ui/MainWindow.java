@@ -484,7 +484,7 @@ public class MainWindow extends Application implements Runnable {
         ArrayList<File> students = Tools.getDirsInAssignmentDir();
         for (int i = 0; i < students.size(); i++) {
             File get = students.get(i);
-            System.out.println("Comparing:" + GlobalValues.sessionSettings.getCurrentStudent() + " with " + get.getName());
+            //System.out.println("Comparing:" + GlobalValues.sessionSettings.getCurrentStudent() + " with " + get.getName());
             if (GlobalValues.sessionSettings.getCurrentStudent().equalsIgnoreCase(get.getName()) && i > 0) {
                 GlobalValues.sessionSettings.setLastStudentMarked(get.getName());
                 FilesTree.collapseFolder(get);
@@ -502,7 +502,7 @@ public class MainWindow extends Application implements Runnable {
         ArrayList<File> students = Tools.getDirsInAssignmentDir();
         for (int i = 0; i < students.size(); i++) {
             File get = students.get(i);
-            System.out.println("Comparing:" + GlobalValues.sessionSettings.getCurrentStudent() + " with " + get.getName());
+           // System.out.println("Comparing:" + GlobalValues.sessionSettings.getCurrentStudent() + " with " + get.getName());
             if (GlobalValues.sessionSettings.getCurrentStudent().equalsIgnoreCase(get.getName()) && i < students.size() - 1) {
                 GlobalValues.sessionSettings.setLastStudentMarked(get.getName());
                 FilesTree.collapseFolder(get);
@@ -518,7 +518,7 @@ public class MainWindow extends Application implements Runnable {
         ArrayList<File> students = Tools.getDirsInAssignmentDir();
         for (int i = 0; i < students.size(); i++) {
             File get = students.get(i);
-            System.out.println("Comparing:" + GlobalValues.sessionSettings.getCurrentStudent() + " with " + get.getName());
+           // System.out.println("Comparing:" + GlobalValues.sessionSettings.getCurrentStudent() + " with " + get.getName());
             if (GlobalValues.sessionSettings.getCurrentStudent().equalsIgnoreCase(get.getName())) {
                 openFilesForStudent(get);
 
