@@ -281,6 +281,13 @@ public class FilesTree implements Runnable {
             fileExtension = F.getName().substring(F.getName().lastIndexOf(".") + 1).toLowerCase();
         }
         switch (fileExtension) {
+            case "c":
+                fileImage = new Image(ClassLoader.getSystemResourceAsStream("icons/c.png"));
+                break;
+            case "cpp": case "c++":
+                fileImage = new Image(ClassLoader.getSystemResourceAsStream("icons/c++.png"));
+                break;
+            
             case "class":
                 fileImage = new Image(ClassLoader.getSystemResourceAsStream("icons/class.png"));
                 break;

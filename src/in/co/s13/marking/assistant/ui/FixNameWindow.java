@@ -5,7 +5,7 @@
  */
 package in.co.s13.marking.assistant.ui;
 
-import in.co.s13.marking.assistant.meta.Tools;
+import in.co.s13.marking.assistant.tools.Tools;
 import java.applet.Applet;
 import java.io.File;
 import java.util.ArrayList;

@@ -1,6 +1,6 @@
 /*
  * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose JavaFileCollector | Templates
+ * To change this template file, choose FileCollector | Templates
  * and open the template in the editor.
  */
 package in.co.s13.marking.assistant.meta.extras;
@@ -18,13 +18,25 @@ import java.util.logging.Logger;
  *
  * @author nika
  */
-public class JavaFileCollector implements Callable<ArrayList<File>> {
+public class FileCollector implements Callable<ArrayList<File>> {
 
     private ArrayList<File> list;
     private String path;
+    private String pattern;
+    private PATTERN expectedTo;
 
-    public JavaFileCollector(String path) {
+    public static enum PATTERN {
+        endsWith, contains
+    };
+
+    public FileCollector(String path) {
         this.path = path;
+    }
+
+    public FileCollector(String path, String pattern, PATTERN expectedTo) {
+        this.path = path;
+        this.pattern = pattern;
+        this.expectedTo = expectedTo;
     }
 
     @Override
@@ -44,25 +56,32 @@ public class JavaFileCollector implements Callable<ArrayList<File>> {
             if (file.isDirectory()) {
 
                 list.addAll(getJavaFiles(file.getAbsolutePath()));
-            } else if (file.getName().endsWith(".java")) {
-                list.add(file);
+            } else if (expectedTo == PATTERN.endsWith) {
+                if (file.getName().endsWith(pattern)) {
+                    list.add(file);
+                }
+            } else if (expectedTo == PATTERN.contains) {
+                if (file.getName().contains(pattern)) {
+                    list.add(file);
+
+                }
             }
         }
 
         return list;
     }
 
-    public static ArrayList<File> callGetJavaFiles(String dir, ExecutorService executorService) {
+    public static ArrayList<File> callGetFiles(String dir, String pattern, PATTERN expectedTo, ExecutorService executorService) {
         ArrayList<File> list = new ArrayList<>();
-        JavaFileCollector jfc = new JavaFileCollector(dir);
+        FileCollector jfc = new FileCollector(dir, pattern, expectedTo);
         Future<ArrayList<File>> ts = executorService.submit(jfc);
         try {
             list = ts.get();
 //                System.out.println("" + list);
         } catch (InterruptedException ex) {
-            Logger.getLogger(JavaFileCollector.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(FileCollector.class.getName()).log(Level.SEVERE, null, ex);
         } catch (ExecutionException ex) {
-            Logger.getLogger(JavaFileCollector.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(FileCollector.class.getName()).log(Level.SEVERE, null, ex);
         }
         return list;
     }

@@ -3,8 +3,11 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package in.co.s13.marking.assistant.meta;
+package in.co.s13.marking.assistant.tools;
 
+import in.co.s13.marking.assistant.meta.FeedBackEntry;
+import in.co.s13.marking.assistant.meta.GlobalValues;
+import in.co.s13.marking.assistant.meta.SettingsEntry;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -132,6 +135,10 @@ public class Tools {
             }
 
         } else {
+            if (!dest.getParentFile().exists()) {
+                dest.getParentFile().mkdir();
+                System.out.println("Directory created");
+            }
             try (InputStream in = new FileInputStream(src); OutputStream out = new FileOutputStream(dest)) {
 
                 byte[] buffer = new byte[1024];
@@ -267,7 +274,7 @@ public class Tools {
                         //  System.out.println(s);
                         outputWriter.println(s + "");
                         if (counter % diff == 0) {
-//                            MainWindow.appendLogToLogArea(out.toString() + "\n");
+                            MainWindow.appendLogToLogArea(out.toString() + "\n");
                             counter = 0;
                             out = new StringBuilder();
                         } else {
@@ -276,7 +283,7 @@ public class Tools {
 
                         }
                     }
-//                    MainWindow.appendLogToLogArea(out.toString() + "\n");
+                    MainWindow.appendLogToLogArea(out.toString() + "\n");
                     counter = 0;
                     out = new StringBuilder();
 
@@ -284,7 +291,7 @@ public class Tools {
                         //System.out.println(s);
                         errorWriter.println(s + "");
                         if (counter % diff == 0) {
-//                            MainWindow.appendLogToLogArea(out.toString() + "\n");
+                            MainWindow.appendLogToLogArea(out.toString() + "\n");
                             counter = 0;
                             out = new StringBuilder();
                         } else {
@@ -293,7 +300,7 @@ public class Tools {
 
                         }
                     }
-//                    MainWindow.appendLogToLogArea(out.toString() + "\n");
+                    MainWindow.appendLogToLogArea(out.toString() + "\n");
 
                     stdError.close();
                     stdInput.close();

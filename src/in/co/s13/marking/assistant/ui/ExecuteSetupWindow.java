@@ -8,6 +8,7 @@ package in.co.s13.marking.assistant.ui;
 import in.co.s13.marking.assistant.meta.CompilerSetting;
 import in.co.s13.marking.assistant.meta.GlobalValues;
 import in.co.s13.marking.assistant.meta.RunSetting;
+import in.co.s13.marking.assistant.tools.Tools;
 import java.io.File;
 import java.util.ArrayList;
 import javafx.application.Application;
@@ -36,9 +37,13 @@ public class ExecuteSetupWindow extends Application {
     private int number;
     private ArrayList<File> runReqFiles = new ArrayList<>();
     private File sampleOutFile;
+    private String sessionName;
+    private boolean remoteEnabled;
 
-    public ExecuteSetupWindow(int number) {
+    public ExecuteSetupWindow(int number, String sessionName, boolean remoteEnabled) {
         this.number = number;
+        this.sessionName = sessionName;
+        this.remoteEnabled = remoteEnabled;
     }
 
     @Override
@@ -64,7 +69,11 @@ public class ExecuteSetupWindow extends Application {
         Label locationLabel = new Label("Run Location: ");
         ComboBox<String> locationCB = new ComboBox<>();
         locationCB.getItems().addAll("local", "remote");
-        locationCB.getSelectionModel().selectFirst();
+        if (remoteEnabled) {
+            locationCB.getSelectionModel().select(1);
+        } else {
+            locationCB.getSelectionModel().selectFirst();
+        }
         grid.add(locationLabel, 0, 0);
         grid.add(locationCB, 1, 0);
 
@@ -93,12 +102,18 @@ public class ExecuteSetupWindow extends Application {
                 FileChooser jfc = new FileChooser();
                 jfc.setTitle("Choose Files Required");
                 jfc.setInitialDirectory(new File("SOLUTION"));
+                ArrayList<File> rreqFList = new ArrayList();
+                rreqFList.addAll(jfc.showOpenMultipleDialog(primaryStage));
                 runReqFiles.clear();
-                runReqFiles.addAll(jfc.showOpenMultipleDialog(primaryStage));
                 StringBuilder sb = new StringBuilder();
-                for (int i = 0; i < runReqFiles.size(); i++) {
-                    File get = runReqFiles.get(i);
+                for (int i = 0; i < rreqFList.size(); i++) {
+                    File get = rreqFList.get(i);
                     sb.append("\"" + get.getAbsolutePath() + "\" ");
+
+                    new File("SOLUTION/" + sessionName + "/" + number).mkdirs();
+                    File dest = new File("SOLUTION/" + sessionName + "/" + number + "/" + get.getName());
+                    Tools.copyFolder(get, dest);
+                    runReqFiles.add(dest);
                 }
                 reqFilesTF.setText(sb.toString());
             }
@@ -131,7 +146,6 @@ public class ExecuteSetupWindow extends Application {
         grid.add(input4runLabel, 0, 5);
         grid.add(input4runTF, 1, 5);
 
-        
         Button okButton = new Button("Ok");
 
         Button clearButton = new Button("Clear");
@@ -158,7 +172,7 @@ public class ExecuteSetupWindow extends Application {
                         new RunSetting(number, locationCB.getSelectionModel().getSelectedItem(),
                                 runCommandTF.getText().trim(),
                                 osCB.getSelectionModel().getSelectedItem(),
-                                runReqFiles, sampleOutFile,input4runTF.getText()));
+                                runReqFiles, sampleOutFile, input4runTF.getText()));
 
                 primaryStage.close();
             }

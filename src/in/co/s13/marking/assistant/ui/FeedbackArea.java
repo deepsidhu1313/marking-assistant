@@ -8,7 +8,7 @@ package in.co.s13.marking.assistant.ui;
 import in.co.s13.marking.assistant.meta.FeedBackEntry;
 import in.co.s13.marking.assistant.meta.GlobalValues;
 import static in.co.s13.marking.assistant.meta.GlobalValues.datFormat;
-import in.co.s13.marking.assistant.meta.Tools;
+import in.co.s13.marking.assistant.tools.Tools;
 import in.co.s13.syntaxtextareafx.SyntaxTextAreaFX;
 import java.io.File;
 import java.util.ArrayList;
@@ -175,14 +175,16 @@ public class FeedbackArea extends BorderPane {
                 public void handle(MouseEvent event) {
                     //   itemEnter = feedbackStu.getItems().indexOf(cell.getItem());
                     //  System.out.println("" + itemEnter);
-                    FeedBackEntry fb = cell.getItem();
-                    cell.setText("" + fb.toString());
-                    if (fb.getType() == FeedBackEntry.EntryType.SECTION_END) {
+                    if (cell != null && cell.getItem()!=null ) {
+                        FeedBackEntry fb = cell.getItem();
+                        cell.setText("" + fb.toString());
+                        if (fb.getType() == FeedBackEntry.EntryType.SECTION_END) {
 
-                        cell.setTextFill(Color.CORNFLOWERBLUE);
-                    } else {
-                        cell.setTextFill(fb.getColor());
+                            cell.setTextFill(Color.CORNFLOWERBLUE);
+                        } else {
+                            cell.setTextFill(fb.getColor());
 
+                        }
                     }
                 }
             });
@@ -469,7 +471,7 @@ public class FeedbackArea extends BorderPane {
         grid.add(typCB, 1, 5);
 
         Button addButton = new Button("Add");
-addButton.setMaxWidth(Double.MAX_VALUE);
+        addButton.setMaxWidth(Double.MAX_VALUE);
         Button clearButton = new Button("Clear");
         clearButton.setMaxWidth(Double.MAX_VALUE);
 //        grid.add(addButton, 0, 6);
@@ -478,11 +480,11 @@ addButton.setMaxWidth(Double.MAX_VALUE);
         updateButton.setMaxWidth(Double.MAX_VALUE);
 //        grid.add(updateButton, 0, 7);
         grid.setPadding(new Insets(10, 10, 10, 10));
-        HBox feedBackDBButtonHBox= new HBox(10);
-        feedBackDBButtonHBox.getChildren().addAll(addButton,clearButton,updateButton);
+        HBox feedBackDBButtonHBox = new HBox(10);
+        feedBackDBButtonHBox.getChildren().addAll(addButton, clearButton, updateButton);
         feedBackDBButtonHBox.setAlignment(Pos.CENTER);
         feedBackDBButtonHBox.setPadding(new Insets(0, 10, 10, 10));
-        
+
         clearButton.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
@@ -564,7 +566,7 @@ addButton.setMaxWidth(Double.MAX_VALUE);
                     }
                 });
 
-        templateVBox.getChildren().addAll(templateLabel, feedbackDB, addNewFeedBack, grid,feedBackDBButtonHBox);
+        templateVBox.getChildren().addAll(templateLabel, feedbackDB, addNewFeedBack, grid, feedBackDBButtonHBox);
         templateVBox.setAlignment(Pos.CENTER);
         studentVBox.setAlignment(Pos.CENTER);
         VBox.setVgrow(feedbackDB, Priority.ALWAYS);
@@ -826,7 +828,6 @@ addButton.setMaxWidth(Double.MAX_VALUE);
 //        altButtonGP.add(defaultTemplateAltButton, 0, 14);
 //        altButtonGP.add(reParseTemplateAltButton, 0, 15);
 
-       
         //marksLabel.setMaxWidth(Double.MAX_VALUE);
         incAltButton.setMaxWidth(Double.MAX_VALUE);
         decrAltButton.setMaxWidth(Double.MAX_VALUE);
@@ -843,27 +844,26 @@ addButton.setMaxWidth(Double.MAX_VALUE);
         resetTemplateAltButton.setMaxWidth(Double.MAX_VALUE);
         defaultTemplateAltButton.setMaxWidth(Double.MAX_VALUE);
         reParseTemplateAltButton.setMaxWidth(Double.MAX_VALUE);
-        Region reg= new Region();
+        Region reg = new Region();
         reg.setMinHeight(10);
-        Region reg2= new Region();
+        Region reg2 = new Region();
         reg2.setMinHeight(10);
         controlsVBox.getChildren().addAll(marksLabel, incAltButton,
                 decrAltButton,
                 giveZeroAltButton,
                 giveFullAltButton,
-                reg,feedbackLabel,
+                reg, feedbackLabel,
                 addAltButton,
                 remAltButton,
                 upAltButton,
                 downAltButton,
                 calcAltButton,
-                reg2,tempControlLabel,
+                reg2, tempControlLabel,
                 setThisAsTempAltButton,
                 resetTemplateAltButton,
                 defaultTemplateAltButton,
                 reParseTemplateAltButton);
-        
-        
+
         controlsVBox.setAlignment(Pos.CENTER);
         altButtonGP.add(controlsVBox, 0, 0);
         altButtonGP.setAlignment(Pos.CENTER);
@@ -914,6 +914,7 @@ addButton.setMaxWidth(Double.MAX_VALUE);
         }
 
         Tools.writeObject(feedBackFile.getAbsolutePath(), dat2);
+        
         Tools.dumpFeedbackDBForThisSession();
     }
 

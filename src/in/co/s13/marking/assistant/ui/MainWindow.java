@@ -11,9 +11,12 @@ import in.co.s13.marking.assistant.meta.GlobalValues;
 import static in.co.s13.marking.assistant.meta.GlobalValues.showFeedBackInSeprateWindow;
 import in.co.s13.marking.assistant.meta.RunSetting;
 import in.co.s13.marking.assistant.meta.SessionSettings;
-import in.co.s13.marking.assistant.meta.Tools;
-import static in.co.s13.marking.assistant.meta.Tools.write;
-import static in.co.s13.marking.assistant.meta.Tools.writeObject;
+import in.co.s13.marking.assistant.tools.ExecuteOverNetwork;
+import in.co.s13.marking.assistant.tools.PrepareRemote;
+import in.co.s13.marking.assistant.tools.Tools;
+import static in.co.s13.marking.assistant.tools.Tools.write;
+import static in.co.s13.marking.assistant.tools.Tools.writeObject;
+import in.co.s13.marking.assistant.tools.TransferFilesToRemote;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -123,7 +126,9 @@ public class MainWindow extends Application implements Runnable {
     //public static int selectedtab = 0;
     public static TextArea consoleArea = new TextArea();
     public static TabPane bottomTabPane;
-    public static TextArea logArea = new TextArea();
+    public static ListView<String> logArea = new ListView<>();
+
+    ExecutorService executorService = Executors.newFixedThreadPool(8);
 
     @Override
     public void start(final Stage stage) throws Exception {
@@ -218,7 +223,7 @@ public class MainWindow extends Application implements Runnable {
         });
         menuView.getItems().add(showFeedBackInSeprateWindowMenuItem);
         Menu menuFix = new Menu("Fix");
-        MenuItem fixName = new MenuItem("Fix Names");
+        MenuItem fixName = new MenuItem("Fix Dir Names");
         fixName.setOnAction((ActionEvent event) -> {
             synchroniseUi();
             try {
@@ -230,12 +235,25 @@ public class MainWindow extends Application implements Runnable {
 
         });
         menuFix.getItems().add(fixName);
+
+        MenuItem renameItem = new MenuItem("Fix File Names");
+        renameItem.setOnAction((ActionEvent event) -> {
+            synchroniseUi();
+            try {
+                RenameFilesWindow fnw = new RenameFilesWindow();
+                fnw.start(new Stage());
+            } catch (Exception ex) {
+                Logger.getLogger(MainWindow.class.getName()).log(Level.SEVERE, null, ex);
+            }
+
+        });
+        menuFix.getItems().add(renameItem);
         Menu menuRun = new Menu("Run");
         MenuItem itemCompileThis = new MenuItem("Compile This Folder");
         itemCompileThis.setOnAction(new EventHandler() {
             public void handle(Event t) {
                 synchroniseUi();
-                doCompileThis();
+                doCompileThis(GlobalValues.sessionSettings.getCurrentStudent());
             }
         });
         MenuItem itemCompileAll = new MenuItem("Compile All");
@@ -249,7 +267,7 @@ public class MainWindow extends Application implements Runnable {
         itemRunThis.setOnAction(new EventHandler() {
             public void handle(Event t) {
                 synchroniseUi();
-                doRunThis();
+                doRunThis(GlobalValues.sessionSettings.getCurrentStudent());
             }
         });
         MenuItem itemRunAll = new MenuItem("Run All");
@@ -263,7 +281,7 @@ public class MainWindow extends Application implements Runnable {
         itemDiffThis.setOnAction(new EventHandler() {
             public void handle(Event t) {
                 synchroniseUi();
-                doCompareThis();
+                doCompareThis(GlobalValues.sessionSettings.getCurrentStudent());
             }
         });
         MenuItem itemDiffAll = new MenuItem("Compare All");
@@ -277,12 +295,30 @@ public class MainWindow extends Application implements Runnable {
         menuRun.getItems().addAll(itemCompileThis, itemCompileAll,
                 itemRunThis, itemRunAll, itemDiffThis, itemDiffAll);
 
-        menuBar.getMenus().addAll(menuFile, menuView, menuFix, menuRun);
+        Menu menuReport = new Menu("Report");
+        MenuItem itemMoveFeedbacks = new MenuItem("Move Feedback");
+        itemMoveFeedbacks.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                moveFeedbacks();
+            }
+        });
+
+        MenuItem itemGenerateScoreList = new MenuItem("Generate Score List");
+        itemGenerateScoreList.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                generateCSVReport();
+            }
+        });
+
+        menuReport.getItems().addAll(itemMoveFeedbacks, itemGenerateScoreList);
+        menuBar.getMenus().addAll(menuFile, menuView, menuFix, menuRun, menuReport);
         //Setup Center and Right
         // TabPaneWrapper wrapper = new TabPaneWrapper(Orientation.HORIZONTAL, .9);
         centerTabPane = new TabPane();
 
-        this.stage.setTitle("ReLinux-IDE");
+        this.stage.setTitle("Marking Assistant");
 
         //wrapper.addNodes(centerTabPane);
         //Add bottom
@@ -347,15 +383,15 @@ public class MainWindow extends Application implements Runnable {
         });
         Button compileButton = new Button("Compile");
         compileButton.setOnAction((ActionEvent event) -> {
-            doCompileThis();
+            doCompileThis(GlobalValues.sessionSettings.getCurrentStudent());
         });
         Button runButton = new Button("Run");
         runButton.setOnAction((ActionEvent event) -> {
-            doRunThis();
+            doRunThis(GlobalValues.sessionSettings.getCurrentStudent());
         });
         Button diffButton = new Button("Compare");
         diffButton.setOnAction((ActionEvent event) -> {
-            doCompareThis();
+            doCompareThis(GlobalValues.sessionSettings.getCurrentStudent());
         });
         Button reloadButton = new Button("Reload");
         reloadButton.setOnAction((ActionEvent event) -> {
@@ -435,11 +471,13 @@ public class MainWindow extends Application implements Runnable {
         newSessButton.setOnAction((ActionEvent event) -> {
             doNewSession();
             s.close();
+
         });
         Button conSessButton = new Button("Resume Session");
         conSessButton.setOnAction((ActionEvent event) -> {
-            doContinueSession();
-            s.close();
+            if (doContinueSession()) {
+                s.close();
+            }
         });
         hBox.getChildren().addAll(newSessButton, conSessButton);
         s.setTitle("Choose");
@@ -485,8 +523,8 @@ public class MainWindow extends Application implements Runnable {
         for (int i = 0; i < students.size(); i++) {
             File get = students.get(i);
             //System.out.println("Comparing:" + GlobalValues.sessionSettings.getCurrentStudent() + " with " + get.getName());
-            if (GlobalValues.sessionSettings.getCurrentStudent().equalsIgnoreCase(get.getName()) && i > 0) {
-                GlobalValues.sessionSettings.setLastStudentMarked(get.getName());
+            if (GlobalValues.sessionSettings.getCurrentStudent().getName().equalsIgnoreCase(get.getName()) && i > 0) {
+                GlobalValues.sessionSettings.setLastStudentMarked(get);
                 FilesTree.collapseFolder(get);
 
                 openFilesForStudent(students.get(i - 1));
@@ -502,9 +540,9 @@ public class MainWindow extends Application implements Runnable {
         ArrayList<File> students = Tools.getDirsInAssignmentDir();
         for (int i = 0; i < students.size(); i++) {
             File get = students.get(i);
-           // System.out.println("Comparing:" + GlobalValues.sessionSettings.getCurrentStudent() + " with " + get.getName());
-            if (GlobalValues.sessionSettings.getCurrentStudent().equalsIgnoreCase(get.getName()) && i < students.size() - 1) {
-                GlobalValues.sessionSettings.setLastStudentMarked(get.getName());
+            // System.out.println("Comparing:" + GlobalValues.sessionSettings.getCurrentStudent() + " with " + get.getName());
+            if (GlobalValues.sessionSettings.getCurrentStudent().getName().equalsIgnoreCase(get.getName()) && i < students.size() - 1) {
+                GlobalValues.sessionSettings.setLastStudentMarked(get);
                 FilesTree.collapseFolder(get);
                 openFilesForStudent(students.get(i + 1));
 
@@ -518,8 +556,8 @@ public class MainWindow extends Application implements Runnable {
         ArrayList<File> students = Tools.getDirsInAssignmentDir();
         for (int i = 0; i < students.size(); i++) {
             File get = students.get(i);
-           // System.out.println("Comparing:" + GlobalValues.sessionSettings.getCurrentStudent() + " with " + get.getName());
-            if (GlobalValues.sessionSettings.getCurrentStudent().equalsIgnoreCase(get.getName())) {
+            // System.out.println("Comparing:" + GlobalValues.sessionSettings.getCurrentStudent() + " with " + get.getName());
+            if (GlobalValues.sessionSettings.getCurrentStudent().getName().equalsIgnoreCase(get.getName())) {
                 openFilesForStudent(get);
 
                 break;
@@ -551,7 +589,7 @@ public class MainWindow extends Application implements Runnable {
         if (!Arrays.asList(files).contains(new File(get.getAbsolutePath() + "/feedback"))) {
             addTab(new File(get.getAbsolutePath() + "/feedback"), tabcounter.get());
         }
-        GlobalValues.sessionSettings.setCurrentStudent(get.getName());
+        GlobalValues.sessionSettings.setCurrentStudent(get);
         FilesTree.expandFolder(get);
         synchroniseUi();
         FilesTree.scrollTo(get);
@@ -567,164 +605,31 @@ public class MainWindow extends Application implements Runnable {
     public void doNewSession() {
 
         synchroniseUi();
-        final TextField sessionName = new TextField();
-        TextField compileNo = new TextField();
-        TextField runNo = new TextField();
+        NewSessionWindow nsw = new NewSessionWindow();
+        Platform.runLater(() -> {
+            try {
+                nsw.start(new Stage());
 
-        Stage newProjectDialog = new Stage();
-        newProjectDialog.setTitle("New Session");
-        BorderPane borderPane = new BorderPane();
-        Label sessionExist = new Label("Session app/sessions/" + sessionName.getText() + ".json Already Exist!!");
-        sessionExist.setTextFill(Paint.valueOf("Red"));
-        sessionExist.setVisible(false);
-        sessionName.textProperty().addListener((observable, oldValue, newValue) -> {
-            if (new File("app/sessions/" + newValue + ".obj").exists()) {
-                sessionExist.setText("Folder Already Exist!!");
-                sessionExist.setVisible(true);
-            } else {
-                sessionExist.setVisible(false);
+                if (nsw.isSelection()) {
+                    startFromFirstStudent();
 
-            }
-        });
-
-        //ButtonBar buttonBar = new ButtonBar();
-        Button okbutton = new Button("OK");
-        Button cancelbutton = new Button("Cancel");
-        //buttonBar.getButtons().addAll(okbutton, cancelbutton);
-
-        GridPane grid = new GridPane();
-        grid.setHgap(10);
-        grid.setVgap(10);
-        grid.setPadding(new Insets(0, 10, 0, 10));
-        ColumnConstraints column1 = new ColumnConstraints();
-        column1.setHalignment(HPos.RIGHT);
-        grid.getColumnConstraints().add(column1);
-        ColumnConstraints column2 = new ColumnConstraints();
-        column2.setHalignment(HPos.LEFT);
-        grid.getColumnConstraints().add(column2);
-
-        sessionName.setPromptText("Project Name");
-
-        grid.add(new Label("Session Name: app/sessions/"), 0, 0);
-        grid.add(sessionName, 1, 0);
-        grid.add(sessionExist, 2, 0);
-        grid.add(new Label("No of Question To Compile For:"), 0, 1);
-        grid.add(compileNo, 1, 1);
-
-        grid.add(new Label("No of Question To Run For:"), 0, 2);
-        grid.add(runNo, 1, 2);
-        grid.add(new Label("Feedback Template:"), 0, 3);
-        TextField templatePath = new TextField();
-        grid.add(templatePath, 1, 3);
-        Button browseFeedbackButton = new Button("Browse");
-        grid.add(browseFeedbackButton, 2, 3);
-        browseFeedbackButton.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-                FileChooser jfc = new FileChooser();
-                jfc.setTitle("Choose Feedback template File");
-                GlobalValues.templateFile = jfc.showOpenDialog(stage);
-                templatePath.setText(GlobalValues.templateFile.getAbsolutePath());
-            }
-        });
-
-        grid.add(new Label("Use Remote Machine (ssh):"), 0, 4);
-        Label usernameLabel = new Label("Username:");
-        grid.add(usernameLabel, 0, 5);
-        Label passLabel = new Label("Password:");
-        grid.add(passLabel, 0, 6);
-        TextField usernameTF = new TextField();
-        usernameTF.setPromptText("user");
-        grid.add(usernameTF, 1, 5);
-        TextField passwdTF = new PasswordField();
-        grid.add(passwdTF, 1, 6);
-
-        CheckBox enableRemoteCB = new CheckBox();
-        usernameLabel.setDisable(true);
-        usernameTF.setDisable(true);
-        passLabel.setDisable(true);
-        passwdTF.setDisable(true);
-
-        enableRemoteCB.selectedProperty().addListener(new ChangeListener<Boolean>() {
-            public void changed(ObservableValue<? extends Boolean> ov,
-                    Boolean old_val, Boolean new_val) {
-                usernameLabel.setDisable(!new_val);
-                usernameTF.setDisable(!new_val);
-                passLabel.setDisable(!new_val);
-                passwdTF.setDisable(!new_val);
-            }
-        });
-        grid.add(enableRemoteCB, 1, 4);
-
-        grid.add(okbutton, 0, 7);
-        grid.add(cancelbutton, 1, 7);
-        GridPane.setHgrow(okbutton, Priority.ALWAYS);
-        borderPane.setCenter(grid);
-
-        okbutton.setOnAction((ActionEvent event) -> {
-            boolean errorFree = true;
-            String project = sessionName.getText().trim();
-
-            if (project.length() < 1) {
-                sessionExist.setText("Set A Session Name!!");
-                errorFree = false;
-
-            }
-            newProjectDialog.hide();
-            GlobalValues.compilerSettingsList.clear();
-            GlobalValues.runSettingsList.clear();
-            int runNum = Integer.parseInt(runNo.getText().trim());
-            int comNum = Integer.parseInt(compileNo.getText().trim());
-            for (int i = 1; i <= comNum; i++) {
-                CompilerSetupWindow csw = new CompilerSetupWindow(i);
-                try {
-                    csw.start(new Stage());
-                } catch (Exception ex) {
-                    Logger.getLogger(MainWindow.class.getName()).log(Level.SEVERE, null, ex);
                 }
-
+            } catch (Exception ex) {
+                Logger.getLogger(MainWindow.class.getName()).log(Level.SEVERE, null, ex);
             }
-
-            for (int i = 1; i <= runNum; i++) {
-                ExecuteSetupWindow csw = new ExecuteSetupWindow(i);
-                try {
-                    csw.start(new Stage());
-                } catch (Exception ex) {
-                    Logger.getLogger(MainWindow.class.getName()).log(Level.SEVERE, null, ex);
-                }
-            }
-
-            GlobalValues.sessionSettings = new SessionSettings(sessionName.getText(),
-                    "", "", comNum, runNum, GlobalValues.compilerSettingsList, GlobalValues.runSettingsList,
-                    templatePath.getText().trim(), usernameTF.getText().trim(),
-                    passwdTF.getText().trim());
-            Tools.parseFeedbackTemplate();
-            Tools.writeObject(("app/sessions/" + sessionName.getText() + ".obj"), GlobalValues.sessionSettings);
-
-            newProjectDialog.close();
-            startFromFirstStudent();
-            event.consume();
-        });
-        cancelbutton.setOnAction((ActionEvent event) -> {
-            newProjectDialog.close();
-            event.consume();
         });
 
-        borderPane.setPadding(new Insets(10, 10, 10, 10));
-        newProjectDialog.setScene(new Scene(borderPane));
-        newProjectDialog.initOwner(stage);
-        newProjectDialog.show();
-
+        //   return nsw.isSelection();
     }
 
-    public void doContinueSession() {
+    public boolean doContinueSession() {
         synchroniseUi();
         FileChooser jfc = new FileChooser();
         jfc.setTitle("Select Session File");
         jfc.setInitialDirectory(new File("./app/sessions/"));
         File choice = jfc.showOpenDialog(new Stage());
         if (choice == null) {
-            return;
+            return false;
         }
         GlobalValues.sessionSettings = (SessionSettings) Tools.readObject(choice.getAbsolutePath());
         try {
@@ -734,20 +639,30 @@ public class MainWindow extends Application implements Runnable {
         } catch (Exception e) {
             Tools.parseFeedbackTemplate();
         }
+//        GlobalValues.sessionSettings.getRunSettings().get(2).setLocation("local");
+//        System.out.println(""+GlobalValues.sessionSettings.getRunSettings().get(2));
+//        Tools.writeObject(choice.getAbsolutePath(), GlobalValues.sessionSettings);
+
         System.out.println("Last Session" + GlobalValues.sessionSettings);
-        if (GlobalValues.sessionSettings.getCurrentStudent().length() < 1) {
-            if (GlobalValues.sessionSettings.getLastStudentMarked().length() < 1) {
+        if (GlobalValues.sessionSettings.getCurrentStudent().getName().length() < 1) {
+            if (GlobalValues.sessionSettings.getLastStudentMarked().getName().length() < 1) {
                 startFromFirstStudent();
-                return;
+                return true;
             } else {
                 GlobalValues.sessionSettings.setCurrentStudent(GlobalValues.sessionSettings.getLastStudentMarked());
 
             }
 
         }
-        //Tools.parseFeedbackTemplate();
-        openFilesForStudent(new File("ASSIGNMENTS/" + GlobalValues.sessionSettings.getCurrentStudent()));
 
+        if (GlobalValues.sessionSettings.getLastStudentMarked().listFiles() == null) {
+            startFromFirstStudent();
+            return true;
+        }
+
+        //Tools.parseFeedbackTemplate();
+        openFilesForStudent(GlobalValues.sessionSettings.getCurrentStudent());
+        return true;
     }
 
     String getFirstStudent() {
@@ -768,6 +683,12 @@ public class MainWindow extends Application implements Runnable {
                 .filter(response -> response == ButtonType.YES).ifPresent(response -> {
             stage.close();
             System.exit(0);
+            executorService.shutdown();
+            try {
+                executorService.awaitTermination(120, TimeUnit.SECONDS);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(MainWindow.class.getName()).log(Level.SEVERE, null, ex);
+            }
         });
 
     }
@@ -793,6 +714,8 @@ public class MainWindow extends Application implements Runnable {
 
             }
         }
+        Tools.writeObject("app/sessions/" + GlobalValues.sessionSettings.getSession_name() + ".obj", GlobalValues.sessionSettings);
+
 //        PrintStream out = null;
 //        try {
 //            out = new PrintStream(selectedTab[selectedtab].getTooltip().getText()); //new AppendFileStream
@@ -825,11 +748,12 @@ public class MainWindow extends Application implements Runnable {
 
             }
         }
+        Tools.writeObject("app/sessions/" + GlobalValues.sessionSettings.getSession_name() + ".obj", GlobalValues.sessionSettings);
+
     }
 
-    public void doCompileThis() {
+    public void doCompileThis(File studentDir) {
         showLogArea();
-        ExecutorService executorService = Executors.newFixedThreadPool(2);
         ArrayList<CompilerSetting> compilerSettings = GlobalValues.sessionSettings.getCompilerSettings();
         for (int i = 0; i < compilerSettings.size(); i++) {
             CompilerSetting get = compilerSettings.get(i);
@@ -840,121 +764,76 @@ public class MainWindow extends Application implements Runnable {
                     + GlobalValues.sessionSettings.getSession_name()
                     + "-compile-"
                     + id;
-            if (get.getOS().trim().equalsIgnoreCase("linux")) {
-                scriptName += ".sh";
-                write(new File(scriptName),
-                        "#!/bin/bash\ncd \"${1}\"\n" + get.getCompilerCommand());
+            if (get.getLocation().equalsIgnoreCase("local")) {
+                if (get.getOS().trim().equalsIgnoreCase("linux")) {
+                    scriptName += ".sh";
+                    write(new File(scriptName),
+                            "#!/bin/bash\ncd \"${1}\"\n" + get.getCompilerCommand());
+                } else {
+
+                }
+                File file = studentDir;
+                if (file.isDirectory()) {
+                    Tools.copyReqFiles(file.getAbsolutePath() + "/", complierReqFiles);
+                    Tools.runFiles(executorService, id, "compile", file.getAbsolutePath(), "/bin/bash", scriptName, file.getAbsolutePath());
+                }
             } else {
+                //PrepareRemote pepRem = new PrepareRemote();
+                File file = studentDir;
+
+                if (get.getOS().trim().equalsIgnoreCase("linux")) {
+                    scriptName += ".sh";
+                    write(new File(scriptName),
+                            "#!/bin/bash\ncd \"${1}\"\n" + get.getCompilerCommand());
+                } else {
+
+                }
+
+                if (file.isDirectory()) {
+
+//                    Tools.copyReqFiles(file.getAbsolutePath() + "/", complierReqFiles);
+//                    TransferFilesToRemote tftr = new TransferFilesToRemote(file,executorService);
+//                    tftr.transfer();
+//                    TransferFilesToRemote tftr2 = new TransferFilesToRemote(new File(scriptName),executorService);
+//                    tftr2.transfer();
+                    ExecuteOverNetwork execOvrNet2 = new ExecuteOverNetwork(executorService, i, "compile-net", file.getAbsolutePath(),
+                            "/bin/bash MarkingAssistant/" + scriptName + " MarkingAssistant/" + file.getAbsolutePath().substring(file.getAbsolutePath().indexOf(System.getProperty("user.dir")) + System.getProperty("user.dir").length() + 1));
+                    execOvrNet2.execute();
+                }
 
             }
-            File file = new File("ASSIGNMENTS/" + GlobalValues.sessionSettings.getCurrentStudent());
-            if (file.isDirectory()) {
-                Tools.copyReqFiles(file.getAbsolutePath() + "/", complierReqFiles);
-                Tools.runFiles(executorService, id, "compile", file.getAbsolutePath(), "/bin/bash", scriptName, file.getAbsolutePath());
-            }
-
-        }
-
-        executorService.shutdown();
-        try {
-            executorService.awaitTermination(120, TimeUnit.SECONDS);
-        } catch (InterruptedException ex) {
-            Logger.getLogger(MainWindow.class.getName()).log(Level.SEVERE, null, ex);
         }
 
     }
 
     public void doCompileAll() {
         showLogArea();
-        ExecutorService executorService = Executors.newFixedThreadPool(2);
-        ArrayList<CompilerSetting> compilerSettings = GlobalValues.sessionSettings.getCompilerSettings();
-        for (int i = 0; i < compilerSettings.size(); i++) {
-            CompilerSetting get = compilerSettings.get(i);
-            int id = get.getId();
-            File assFile = new File("ASSIGNMENTS");
-            File files[] = assFile.listFiles();
-            ArrayList<File> complierReqFiles = get.getCompilerReqFiles();
-            String scriptName = "SCRIPTS/"
-                    + GlobalValues.sessionSettings.getSession_name()
-                    + "-compile-"
-                    + id;
-            if (get.getOS().trim().equalsIgnoreCase("linux")) {
-                scriptName += ".sh";
-                write(new File(scriptName),
-                        "#!/bin/bash\ncd \"${1}\"\n" + get.getCompilerCommand());
-            } else {
-
+        File assFile = new File("ASSIGNMENTS");
+        File files[] = assFile.listFiles();
+        for (int j = 0; j < files.length; j++) {
+            File file = files[j];
+            if (file.isDirectory()) {
+                doCompileThis(file);
             }
-            for (int j = 0; j < files.length; j++) {
-                File file = files[j];
-                if (file.isDirectory()) {
-                    Tools.copyReqFiles(file.getAbsolutePath() + "/", complierReqFiles);
-                    Tools.runFiles(executorService, id, "compile", file.getAbsolutePath(), "/bin/bash", scriptName, file.getAbsolutePath());
-                }
-            }
-
-        }
-
-        executorService.shutdown();
-        try {
-            executorService.awaitTermination(120, TimeUnit.SECONDS);
-        } catch (InterruptedException ex) {
-            Logger.getLogger(MainWindow.class.getName()).log(Level.SEVERE, null, ex);
         }
 
     }
 
     public void doRunAll() {
         showLogArea();
-        ExecutorService executorService = Executors.newFixedThreadPool(2);
-        ArrayList<RunSetting> runSettings = GlobalValues.sessionSettings.getRunSettings();
-        for (int i = 0; i < runSettings.size(); i++) {
-            RunSetting get = runSettings.get(i);
-            int id = get.getId();
-            File assFile = new File("ASSIGNMENTS");
-            File files[] = assFile.listFiles();
-            ArrayList<File> complierReqFiles = get.getRunReqFiles();
-            String scriptName = "SCRIPTS/"
-                    + GlobalValues.sessionSettings.getSession_name()
-                    + "-run-"
-                    + id;
-            if (get.getOS().trim().equalsIgnoreCase("linux")) {
-                scriptName += ".sh";
-                String redirInp = "";
-                if (get.getInputSequence().length() > 0) {
-                    redirInp = " < input-" + id;
-
-                }
-                write(new File(scriptName),
-                        "#!/bin/bash\ncd \"${1}\"\n" + get.getRunCommand() + redirInp);
-            } else {
-
+        File assFile = new File("ASSIGNMENTS");
+        File files[] = assFile.listFiles();
+        for (int j = 0; j < files.length; j++) {
+            File file = files[j];
+            if (file.isDirectory()) {
+                doRunThis(file);
             }
-            for (int j = 0; j < files.length; j++) {
-                File file = files[j];
-                if (file.isDirectory()) {
-                    Tools.copyReqFiles(file.getAbsolutePath() + "/", complierReqFiles);
-                    if (get.getInputSequence().length() > 0) {
-                        Tools.write(new File(file.getAbsolutePath() + "/input-" + id), get.getInputSequence());
-                    }
-                    Tools.runFiles(executorService, id, "run", file.getAbsolutePath(), "/bin/bash", scriptName, file.getAbsolutePath());
-                }
-            }
-
-        }
-
-        executorService.shutdown();
-        try {
-            executorService.awaitTermination(120, TimeUnit.SECONDS);
-        } catch (InterruptedException ex) {
-            Logger.getLogger(MainWindow.class.getName()).log(Level.SEVERE, null, ex);
         }
 
     }
 
-    public void doRunThis() {
+    public void doRunThis(File studentDir) {
         showLogArea();
-        ExecutorService executorService = Executors.newFixedThreadPool(2);
         ArrayList<RunSetting> runSettings = GlobalValues.sessionSettings.getRunSettings();
         for (int i = 0; i < runSettings.size(); i++) {
             RunSetting get = runSettings.get(i);
@@ -977,129 +856,150 @@ public class MainWindow extends Application implements Runnable {
             } else {
 
             }
-            {
-                File file = new File("ASSIGNMENTS/" + GlobalValues.sessionSettings.getCurrentStudent());
+
+            if (get.getLocation().trim().toLowerCase().equalsIgnoreCase("local".trim())) {
+                File file = studentDir;
 
                 if (file.isDirectory()) {
                     Tools.copyReqFiles(file.getAbsolutePath() + "/", complierReqFiles);
                     if (get.getInputSequence().length() > 0) {
                         Tools.write(new File(file.getAbsolutePath() + "/input-" + id), get.getInputSequence());
                     }
+                    System.out.println("Ran locally " + id);
                     Tools.runFiles(executorService, id, "run", file.getAbsolutePath(), "/bin/bash", scriptName, file.getAbsolutePath());
                 }
+            } else {
+//                PrepareRemote pepRem = new PrepareRemote();
+                File file = studentDir;
+                if (file.isDirectory()) {
+                    Tools.copyReqFiles(file.getAbsolutePath() + "/", complierReqFiles);
+//                    new TransferFilesToRemote(file,executorService);
+//                    new TransferFilesToRemote(new File(scriptName),executorService);
+                    ExecuteOverNetwork execOvrNet = new ExecuteOverNetwork(executorService, id, "run", file.getAbsolutePath(), "/bin/bash MarkingAssistant/" + scriptName + " MarkingAssistant/" + file.getAbsolutePath().substring(file.getAbsolutePath().indexOf(System.getProperty("user.dir")) + System.getProperty("user.dir").length() + 1));
+                    execOvrNet.execute();
+                }
+
             }
-
-        }
-
-        executorService.shutdown();
-        try {
-            executorService.awaitTermination(120, TimeUnit.SECONDS);
-        } catch (InterruptedException ex) {
-            Logger.getLogger(MainWindow.class.getName()).log(Level.SEVERE, null, ex);
+            System.out.println(get.getLocation().trim() + " Ran locally ::: " + id + " equals " + get.getLocation().trim().toLowerCase().equalsIgnoreCase("local".trim()));
         }
 
     }
 
     public void doCompareAll() {
         showLogArea();
-        ExecutorService executorService = Executors.newFixedThreadPool(2);
-        ArrayList<RunSetting> runSettings = GlobalValues.sessionSettings.getRunSettings();
-        for (int i = 0; i < runSettings.size(); i++) {
-            RunSetting get = runSettings.get(i);
-            int id = get.getId();
-            File assFile = new File("ASSIGNMENTS");
-            File files[] = assFile.listFiles();
-            ArrayList<File> complierReqFiles = get.getRunReqFiles();
-            String scriptName = "SCRIPTS/"
-                    + GlobalValues.sessionSettings.getSession_name()
-                    + "-diff-"
-                    + id;
-            if (get.getOS().trim().equalsIgnoreCase("linux")) {
-                scriptName += ".sh";
-
-                write(new File(scriptName),
-                        "#!/bin/bash\ncd \"${1}\"\n diff -u -B -b \"${2}\" \"${3}\"");
-            } else {
-
-            }
-            for (int j = 0; j < files.length; j++) {
-                File file = files[j];
-                if (file.isDirectory()) {
-                    Tools.copyReqFiles(file.getAbsolutePath() + "/", complierReqFiles);
-
-                    Tools.runFiles(executorService, id, "diff", file.getAbsolutePath(), "/bin/bash", scriptName, file.getAbsolutePath(), get.getSampleOutPutFile().getAbsolutePath(), "run-out-" + id + ".log");
-                }
-            }
-
-        }
-
-        executorService.shutdown();
-        try {
-            executorService.awaitTermination(120, TimeUnit.SECONDS);
-        } catch (InterruptedException ex) {
-            Logger.getLogger(MainWindow.class.getName()).log(Level.SEVERE, null, ex);
+        File assFile = new File("ASSIGNMENTS");
+        File files[] = assFile.listFiles();
+        for (int j = 0; j < files.length; j++) {
+            File file = files[j];
+            doCompareThis(file);
         }
 
     }
 
-    public void doCompareThis() {
+    public void doCompareThis(File studentDir) {
         showLogArea();
-        ExecutorService executorService = Executors.newFixedThreadPool(2);
         ArrayList<RunSetting> runSettings = GlobalValues.sessionSettings.getRunSettings();
         for (int i = 0; i < runSettings.size(); i++) {
+
             RunSetting get = runSettings.get(i);
             int id = get.getId();
+            if (get.getSampleOutPutFile() != null) {
+                ArrayList<File> complierReqFiles = get.getRunReqFiles();
+                String scriptName = "SCRIPTS/"
+                        + GlobalValues.sessionSettings.getSession_name()
+                        + "-diff-"
+                        + id;
+                if (get.getOS().trim().equalsIgnoreCase("linux")) {
+                    scriptName += ".sh";
 
-            ArrayList<File> complierReqFiles = get.getRunReqFiles();
-            String scriptName = "SCRIPTS/"
-                    + GlobalValues.sessionSettings.getSession_name()
-                    + "-diff-"
-                    + id;
-            if (get.getOS().trim().equalsIgnoreCase("linux")) {
-                scriptName += ".sh";
+                    write(new File(scriptName),
+                            "#!/bin/bash\ncd \"${1}\"\n diff -u -B -b \"${2}\" \"${3}\"");
+                } else {
 
-                write(new File(scriptName),
-                        "#!/bin/bash\ncd \"${1}\"\n diff -u -B -b \"${2}\" \"${3}\"");
-            } else {
+                }
 
-            }
-            {
-                File file = new File("ASSIGNMENTS/" + GlobalValues.sessionSettings.getCurrentStudent());
+                File file = studentDir;
 
                 if (file.isDirectory()) {
                     Tools.copyReqFiles(file.getAbsolutePath() + "/", complierReqFiles);
-
                     Tools.runFiles(executorService, id, "diff", file.getAbsolutePath(), "/bin/bash", scriptName, file.getAbsolutePath(), get.getSampleOutPutFile().getAbsolutePath(), "run-out-" + id + ".log");
                 }
+
             }
-
-        }
-
-        executorService.shutdown();
-        try {
-            executorService.awaitTermination(120, TimeUnit.SECONDS);
-        } catch (InterruptedException ex) {
-            Logger.getLogger(MainWindow.class.getName()).log(Level.SEVERE, null, ex);
         }
 
     }
     Stage st = new Stage();
 
     public void showLogArea() {
+//        Platform.runLater(new Runnable() {
+//            @Override
+//            public void run() {
+//                st.setTitle("Log");
+//                st.setScene(new Scene(new BorderPane(logArea)));
+//                st.show();
+//            }
+//        });
 
-//        st.setTitle("Log");
-//        st.setScene(new Scene(new BorderPane(logArea)));
-//        st.show();
     }
 
     public static void appendLogToLogArea(String Text) {
 //        Platform.runLater(new Runnable() {
 //            @Override
 //            public void run() {
-//                logArea.appendText(Text);
+//                logArea.getItems().addAll(Text.split("\n"));
 //            }
 //        });
 
+    }
+
+    public void moveFeedbacks() {
+        ArrayList<File> dirs = Tools.getDirsInAssignmentDir();
+        new File("FEEDBACK/" + GlobalValues.sessionSettings.getSession_name() + "/").mkdirs();
+        for (int i = 0; i < dirs.size(); i++) {
+            File get = dirs.get(i);
+            File[] files = get.listFiles();
+            for (int j = 0; j < files.length; j++) {
+                File file = files[j];
+                if (!file.isDirectory() && file.getName().equalsIgnoreCase("feedback.txt")) {
+
+                    Tools.copyFolder(file, new File("FEEDBACK/" + GlobalValues.sessionSettings.getSession_name() + "/" + get.getName() + "-feedback.txt"));
+                }
+            }
+        }
+    }
+
+    public void generateCSVReport() {
+        ArrayList<File> dirs = Tools.getDirsInAssignmentDir();
+        StringBuilder sb = new StringBuilder("Name,Total Marks, Bonus\n");
+        new File("FEEDBACK/" + GlobalValues.sessionSettings.getSession_name() + "/").mkdirs();
+        for (int i = 0; i < dirs.size(); i++) {
+            File get = dirs.get(i);
+            sb.append(get.getName()).append(",");
+            File[] files = get.listFiles();
+            for (int j = 0; j < files.length; j++) {
+                File file = files[j];
+                if (!file.isDirectory() && file.getName().endsWith("feedback")) {
+                    ArrayList<FeedBackEntry> content = (ArrayList<FeedBackEntry>) Tools.readObject(file.getAbsolutePath());
+                    for (int k = 0; k < content.size(); k++) {
+                        FeedBackEntry line = content.get(k);
+                        if (line.getFeedBack().trim().equalsIgnoreCase("ASSIGNMENT TOTAL")) {
+                            System.out.println("" + line.toString());
+                            sb.append(line.getObtainedMarks()).append(", ");
+                        } else if (line.getFeedBack().trim().equalsIgnoreCase("Bonus")) {
+                            double bon = line.getObtainedMarks();
+                            if (bon > 0) {
+                                sb.append(bon).append(", ");
+                            }
+                        }
+                    }
+                }
+
+            }
+            sb.append("\n");
+        }
+
+        Tools.write(new File("FEEDBACK/" + GlobalValues.sessionSettings.getSession_name() + "/score-list.csv"), sb.toString());
     }
 
     public static synchronized void addTab(File selectedFile, int tabcounter) {

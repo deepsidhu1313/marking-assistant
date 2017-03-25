@@ -5,6 +5,7 @@
  */
 package in.co.s13.marking.assistant.meta;
 
+import java.io.File;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Objects;
@@ -16,13 +17,15 @@ import org.json.JSONObject;
  */
 public class SessionSettings implements Serializable {
 
-    private String session_name, lastStudentMarked = "\t", CurrentStudent = "\t", remoteUserName, remotePassword;
-    private int numberOfCompilerSettings, numberOfRunSettings;
+    private String session_name, remoteHost, remoteUserName, remotePassword;
+    private int numberOfCompilerSettings, numberOfRunSettings, remotePort;
     private ArrayList<CompilerSetting> compilerSettings;
     private ArrayList<RunSetting> runSettings;
     private String feedbackTemplate;
+    private File lastStudentMarked, CurrentStudent;
+    private String remoteOS;
 
-    public SessionSettings(String session_name, String lastStudentMarked, String CurrentStudent, int numberOfCompilerSettings, int numberOfRunSettings, ArrayList<CompilerSetting> compilerSettings, ArrayList<RunSetting> runSettings, String feedbackTemplate, String remoteUserName, String remotePassword) {
+    public SessionSettings(String session_name, File lastStudentMarked, File CurrentStudent, int numberOfCompilerSettings, int numberOfRunSettings, ArrayList<CompilerSetting> compilerSettings, ArrayList<RunSetting> runSettings, String feedbackTemplate, String remoteHost, int remotePort, String remoteUserName, String remotePassword, String remoteOS) {
         this.session_name = session_name;
         this.lastStudentMarked = lastStudentMarked;
         this.CurrentStudent = CurrentStudent;
@@ -31,8 +34,11 @@ public class SessionSettings implements Serializable {
         this.compilerSettings = compilerSettings;
         this.runSettings = runSettings;
         this.feedbackTemplate = feedbackTemplate;
+        this.remoteHost = remoteHost;
+        this.remotePort = remotePort;
         this.remoteUserName = remoteUserName;
         this.remotePassword = remotePassword;
+        this.remoteOS = remoteOS;
     }
 
     public String getSession_name() {
@@ -43,19 +49,19 @@ public class SessionSettings implements Serializable {
         this.session_name = session_name;
     }
 
-    public String getLastStudentMarked() {
+    public File getLastStudentMarked() {
         return lastStudentMarked;
     }
 
-    public void setLastStudentMarked(String lastStudentMarked) {
+    public void setLastStudentMarked(File lastStudentMarked) {
         this.lastStudentMarked = lastStudentMarked;
     }
 
-    public String getCurrentStudent() {
+    public File getCurrentStudent() {
         return CurrentStudent;
     }
 
-    public void setCurrentStudent(String CurrentStudent) {
+    public void setCurrentStudent(File CurrentStudent) {
         this.CurrentStudent = CurrentStudent;
     }
 
@@ -115,6 +121,30 @@ public class SessionSettings implements Serializable {
         this.remotePassword = remotePassword;
     }
 
+    public String getRemoteHost() {
+        return remoteHost;
+    }
+
+    public void setRemoteHost(String remoteHost) {
+        this.remoteHost = remoteHost;
+    }
+
+    public int getRemotePort() {
+        return remotePort;
+    }
+
+    public void setRemotePort(int remotePort) {
+        this.remotePort = remotePort;
+    }
+
+    public String getRemoteOS() {
+        return remoteOS;
+    }
+
+    public void setRemoteOS(String remoteOS) {
+        this.remoteOS = remoteOS;
+    }
+
     @Override
     public boolean equals(Object obj) {
         if (this == obj) {
@@ -157,26 +187,34 @@ public class SessionSettings implements Serializable {
         if (!Objects.equals(this.runSettings, other.runSettings)) {
             return false;
         }
+        if (!Objects.equals(this.remoteHost, other.remoteHost)) {
+            return false;
+        }
+        if (this.remotePort != other.remotePort) {
+            return false;
+        }
         return true;
     }
 
     @Override
     public String toString() {
-        return "{" + "session_name:" + session_name + ", lastStudentMarked:" + lastStudentMarked + ", CurrentStudent:" + CurrentStudent + ", numberOfCompilerSettings:" + numberOfCompilerSettings + ", numberOfRunSettings:" + numberOfRunSettings + ", compilerSettings:" + compilerSettings + ", runSettings:" + runSettings + ", feedbackTemplate:" + feedbackTemplate + ", remoteUserName:" + remoteUserName + ", remotePassword:" + remotePassword + '}';
+        return "{" + "session_name:" + session_name + ", lastStudentMarked:" + lastStudentMarked.getAbsolutePath() + ", CurrentStudent:" + CurrentStudent.getAbsolutePath() + ", numberOfCompilerSettings:" + numberOfCompilerSettings + ", numberOfRunSettings:" + numberOfRunSettings + ", compilerSettings:" + compilerSettings + ", runSettings:" + runSettings + ", feedbackTemplate:" + feedbackTemplate + ", remoteHost:" + remoteHost + ", remotePort:" + remotePort + ", remoteUserName:" + remoteUserName + ", remotePassword:" + remotePassword + ",remoteOS:" + remoteOS + '}';
     }
 
     public SessionSettings(JSONObject obj) {
         session_name = obj.getString("session_name");
-        lastStudentMarked = obj.getString("lastStudentMarked");
-        CurrentStudent = obj.getString("CurrentStudent");
+        lastStudentMarked = new File(obj.getString("lastStudentMarked"));
+        CurrentStudent = new File(obj.getString("CurrentStudent"));
         numberOfCompilerSettings = obj.getInt("numberOfCompilerSettings");
         numberOfRunSettings = obj.getInt("numberOfRunSettings");
         compilerSettings = (ArrayList<CompilerSetting>) obj.get("compilerSettings");
         runSettings = (ArrayList<RunSetting>) obj.get("runSettings");
         feedbackTemplate = obj.getString("feedbackTemplate");
+        remoteHost = obj.getString("remoteHost");
+        remotePort = obj.getInt("remotePort");
         remoteUserName = obj.getString("remoteUserName");
         remotePassword = obj.getString("remotePassword");
-
+        remoteOS = obj.getString("remoteOS");
     }
 
 }
