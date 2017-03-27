@@ -16,11 +16,13 @@ import javafx.collections.ObservableList;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.scene.control.MultipleSelectionModel;
+import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
+import javafx.util.Callback;
 import javax.swing.Icon;
 import javax.swing.filechooser.FileSystemView;
 
@@ -146,6 +148,7 @@ public class FilesTree implements Runnable {
                                 children.get(i).setGraphic(new ImageView(getIcon(files[i])));
 
                             }
+
                             children.get(i).addEventHandler(TreeItem.branchCollapsedEvent(), new EventHandler() {
                                 @Override
                                 public void handle(Event e) {
@@ -194,6 +197,10 @@ public class FilesTree implements Runnable {
             filetree.setSimpleRoot(f.getName());
             tv = this.buildFileSystemBrowser();
             tv.getRoot().setExpanded(true);
+
+            tv.setEditable(true);
+            tv.setCellFactory((TreeView<File> p) -> new FileTreeCell());
+
             //tv.setSelectionModel(null);
             MultipleSelectionModel msm = tv.getSelectionModel();
             tv.setOnMouseClicked((MouseEvent mouseEvent) -> {
@@ -284,10 +291,11 @@ public class FilesTree implements Runnable {
             case "c":
                 fileImage = new Image(ClassLoader.getSystemResourceAsStream("icons/c.png"));
                 break;
-            case "cpp": case "c++":
+            case "cpp":
+            case "c++":
                 fileImage = new Image(ClassLoader.getSystemResourceAsStream("icons/c++.png"));
                 break;
-            
+
             case "class":
                 fileImage = new Image(ClassLoader.getSystemResourceAsStream("icons/class.png"));
                 break;
