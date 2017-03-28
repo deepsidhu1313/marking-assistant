@@ -13,14 +13,18 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
+import javafx.scene.control.ContextMenu;
+import javafx.scene.control.MenuItem;
 import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.util.Callback;
 import javax.swing.Icon;
@@ -35,10 +39,14 @@ public class FilesTree implements Runnable {
     static CustomTree filetree = new CustomTree();
 
     public static TreeView<File> tv = new TreeView();
+    private ContextMenu cm = new ContextMenu();
     public static Image folderCollapseImage = new Image(ClassLoader.getSystemResourceAsStream("icons/folder.png"));
     public static Image folderExpandImage = new Image(ClassLoader.getSystemResourceAsStream("icons/folder-open.png"));
     public static Image fileImage = new Image(ClassLoader.getSystemResourceAsStream("icons/file.png"));
     private static ArrayList<File> expandedDirs = new ArrayList<>();
+    private static File selectedProject;
+    private static File selectedFile;
+
     private MainWindow mainWindow;
     //SQLiteJDBC treedb = new SQLiteJDBC();
     String sql;
@@ -51,7 +59,8 @@ public class FilesTree implements Runnable {
 
     public FilesTree(MainWindow mw) {
         this.mainWindow = mw;
-        //  this.getTree();
+
+//  this.getTree();
     }
 
     private TreeView buildFileSystemBrowser() {
@@ -201,6 +210,21 @@ public class FilesTree implements Runnable {
             tv.setEditable(true);
             tv.setCellFactory((TreeView<File> p) -> new FileTreeCell());
 
+            MenuItem openStuItem = new MenuItem("Open Student");
+            openStuItem.setOnAction((ActionEvent event) -> {
+                mainWindow.closeAllTabs();
+                mainWindow.openFilesForStudent(selectedProject);
+            });
+
+            MenuItem openFile = new MenuItem("Open File");
+            openFile.setOnAction((ActionEvent event) -> {
+                if (!selectedFile.isDirectory()) {
+                    mainWindow.addTab(selectedFile, 1);
+                }
+            });
+
+            cm.getItems().addAll(openStuItem, openFile);
+
             //tv.setSelectionModel(null);
             MultipleSelectionModel msm = tv.getSelectionModel();
             tv.setOnMouseClicked((MouseEvent mouseEvent) -> {
@@ -219,12 +243,26 @@ public class FilesTree implements Runnable {
                     if (item != null && item.getValue() != null && !item.getValue().getName().equalsIgnoreCase("workspace")) {
                         System.out.println("Selected Text : " + item.getValue().getAbsolutePath());
                         System.out.println("Selected Project Is:" + getProjectName(item));
+                        selectedProject = getProjectDir(item);
+                        selectedFile = item.getValue();
                         String projectName = getProjectName(item.getValue());
                         if (projectName != null && !(GlobalValues.selectedParentFolder.trim().equalsIgnoreCase(projectName.trim()))) {
                             GlobalValues.selectedParentFolder = projectName.trim();
 //                            mainWindow.loadManifest(new File("workspace/" + GlobalValues.selectedParentFolder));
                         }
                     }
+
+                }
+
+                if (mouseEvent.getButton() == MouseButton.SECONDARY) {
+                    if (cm != null) {
+                        TreeItem<File> item = (TreeItem<File>) msm.getSelectedItem();
+                        boolean isDir = item.getValue().isDirectory();
+                        openFile.setDisable(isDir);
+                        cm.show(tv, mouseEvent.getScreenX(), mouseEvent.getScreenY());
+                    }
+                } else if (cm != null && cm.isShowing()) {
+                    cm.hide();
                 }
             });
         }
@@ -260,6 +298,38 @@ public class FilesTree implements Runnable {
             return "";
         }
 
+    }
+
+    public static File getProjectDir(TreeItem<File> item) {
+        if (item.getParent() != null) {
+            if (item.getParent()
+                    .getValue().getName()
+                    .equalsIgnoreCase(
+                            ("ASSIGNMENTS"))) {
+                return item.getValue();
+            } else {
+                return getProjectDir(item.getParent());
+            }
+        } else {
+            return null;
+        }
+
+    }
+
+    public static File getProjectDir(File f) {
+        if (f.getParentFile() != null) {
+            if (f.getParentFile()
+                    .getAbsolutePath()
+                    .equalsIgnoreCase(
+                            (new File("ASSIGNMENTS")
+                            .getAbsolutePath()))) {
+                return f;
+            } else {
+                return getProjectDir(f.getParentFile());
+            }
+        } else {
+            return null;
+        }
     }
 
     public static void expandFolder(File dir) {
