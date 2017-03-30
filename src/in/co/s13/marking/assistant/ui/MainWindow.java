@@ -208,6 +208,7 @@ public class MainWindow extends Application {
         if (!feedBackStage.isFocused()) {
             feedBackStage.setFocused(true);
         }
+        
     }
 
     public static void appendLogToLogArea(String Text) {
@@ -634,19 +635,30 @@ public class MainWindow extends Application {
             for (int j = 0; j < files.length; j++) {
                 File file = files[j];
                 if (!file.isDirectory() && file.getName().endsWith("feedback")) {
+                    StringBuilder feedbackContent = new StringBuilder();
                     ArrayList<FeedBackEntry> content = (ArrayList<FeedBackEntry>) Tools.readObject(file.getAbsolutePath());
                     for (int k = 0; k < content.size(); k++) {
                         FeedBackEntry line = content.get(k);
                         if (line.getFeedBack().trim().equalsIgnoreCase("ASSIGNMENT TOTAL")) {
                             System.out.println("" + line.toString());
                             sb.append(line.getObtainedMarks()).append(", ");
+                            feedbackContent.append(line.toString()).append("\n");
+                        } else if (line.getFeedBack().trim().equalsIgnoreCase("Total WIth Bonus")) {
+
+                        }else if (line.getFeedBack().trim().equalsIgnoreCase("Section End")) {
+
                         } else if (line.getFeedBack().trim().equalsIgnoreCase("Bonus")) {
-                            double bon = line.getObtainedMarks();
-                            if (bon > 0) {
-                                sb.append(bon).append(", ");
+
+                            {
+                                sb.append("X, ");
                             }
+                        } else {
+                            feedbackContent.append(line.toString()).append("\n");
+
                         }
                     }
+                    
+                    Tools.write(new File("FEEDBACK/" + GlobalValues.sessionSettings.getSession_name() + "/"+get.getName()+"-feedback.txt"), feedbackContent.toString());
                 }
 
             }
@@ -1045,7 +1057,7 @@ public class MainWindow extends Application {
 // bigTabPane.getItems().add(centerTabPane);
         bigTabPane.getItems().add(centerSplitPane);
 // bigTabPane.getItems().add(rsplitpane);
-        bigTabPane.setDividerPositions(0.15f);
+        bigTabPane.setDividerPositions(0.13f);
         bp.setCenter(bigTabPane);
 //bp.setRight(wrapperRight.getNode());
         Scene myScene = new Scene(bp);

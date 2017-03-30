@@ -175,7 +175,7 @@ public class FeedbackArea extends BorderPane {
                 public void handle(MouseEvent event) {
                     //   itemEnter = feedbackStu.getItems().indexOf(cell.getItem());
                     //  System.out.println("" + itemEnter);
-                    if (cell != null && cell.getItem()!=null ) {
+                    if (cell != null && cell.getItem() != null) {
                         FeedBackEntry fb = cell.getItem();
                         cell.setText("" + fb.toString());
                         if (fb.getType() == FeedBackEntry.EntryType.SECTION_END) {
@@ -226,10 +226,16 @@ public class FeedbackArea extends BorderPane {
                         MenuItem remove = new MenuItem("Remove");
                         remove.setOnAction((ActionEvent event1) -> {
                             List<FeedBackEntry> items = feedbackStu.getSelectionModel().getSelectedItems();
+                            ArrayList<FeedBackEntry> toRemove = new ArrayList<>();
                             for (int i = 0; i < items.size(); i++) {
                                 FeedBackEntry get = items.get(i);
-                                feedbackStu.getItems().remove(get);
+                                toRemove.add(get);
 
+                            }
+
+                            for (int i = 0; i < toRemove.size(); i++) {
+                                FeedBackEntry get = toRemove.get(i);
+                                feedbackStu.getItems().remove(get);
                             }
 
                         });
@@ -696,18 +702,33 @@ public class FeedbackArea extends BorderPane {
             public void handle(ActionEvent event) {
                 if (lastFocused == 1) {
                     List<FeedBackEntry> items = feedbackStu.getSelectionModel().getSelectedItems();
+                    ArrayList<FeedBackEntry> toRemove = new ArrayList<>();
                     for (int i = 0; i < items.size(); i++) {
                         FeedBackEntry get = items.get(i);
-                        feedbackStu.getItems().remove(get);
+                        toRemove.add(get);
 
                     }
+
+                    for (int i = 0; i < toRemove.size(); i++) {
+                        FeedBackEntry get = toRemove.get(i);
+                        feedbackStu.getItems().remove(get);
+                    }
+
                 }
                 if (lastFocused == 2) {
                     List<FeedBackEntry> selectedItems = feedbackDB.getSelectionModel().getSelectedItems();
+                    ArrayList<FeedBackEntry> toRemove = new ArrayList<>();
+
                     for (int i = 0; i < selectedItems.size(); i++) {
                         FeedBackEntry get = selectedItems.get(i);
+                        toRemove.add(get);
+                    }
+
+                    for (int i = 0; i < toRemove.size(); i++) {
+                        FeedBackEntry get = toRemove.get(i);
                         GlobalValues.feedbackDBArray.remove(get);
                         feedbackDB.getItems().remove(get);
+
                     }
                 }
 
@@ -866,7 +887,7 @@ public class FeedbackArea extends BorderPane {
 
         controlsVBox.setAlignment(Pos.CENTER);
         altButtonGP.add(controlsVBox, 0, 0);
-        altButtonGP.setAlignment(Pos.CENTER);
+       // altButtonGP.setAlignment(Pos.CENTER);
         altButtonGP.setVgap(15);
         grid.getColumnConstraints().add(column1);
         ColumnConstraints column3 = new ColumnConstraints();
@@ -914,7 +935,7 @@ public class FeedbackArea extends BorderPane {
         }
 
         Tools.writeObject(feedBackFile.getAbsolutePath(), dat2);
-        
+
         Tools.dumpFeedbackDBForThisSession();
     }
 

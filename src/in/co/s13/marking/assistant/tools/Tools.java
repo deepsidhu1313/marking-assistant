@@ -32,13 +32,9 @@ import static in.co.s13.marking.assistant.meta.GlobalValues.dirsInAssignmentFold
 import in.co.s13.marking.assistant.ui.MainWindow;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
-import org.json.JSONArray;
-import org.json.JSONObject;
 
 /**
  *

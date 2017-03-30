@@ -207,7 +207,7 @@ public class FilesTree implements Runnable {
             tv = this.buildFileSystemBrowser();
             tv.getRoot().setExpanded(true);
 
-            tv.setEditable(true);
+            //tv.setEditable(true);
             tv.setCellFactory((TreeView<File> p) -> new FileTreeCell());
 
             MenuItem openStuItem = new MenuItem("Open Student");
@@ -245,6 +245,7 @@ public class FilesTree implements Runnable {
                         System.out.println("Selected Project Is:" + getProjectName(item));
                         selectedProject = getProjectDir(item);
                         selectedFile = item.getValue();
+                        
                         String projectName = getProjectName(item.getValue());
                         if (projectName != null && !(GlobalValues.selectedParentFolder.trim().equalsIgnoreCase(projectName.trim()))) {
                             GlobalValues.selectedParentFolder = projectName.trim();
@@ -259,7 +260,7 @@ public class FilesTree implements Runnable {
                         TreeItem<File> item = (TreeItem<File>) msm.getSelectedItem();
                         boolean isDir = item.getValue().isDirectory();
                         openFile.setDisable(isDir);
-                        cm.show(tv, mouseEvent.getScreenX(), mouseEvent.getScreenY());
+                        cm.show(mainWindow.stage, mouseEvent.getScreenX(), mouseEvent.getScreenY());
                     }
                 } else if (cm != null && cm.isShowing()) {
                     cm.hide();
