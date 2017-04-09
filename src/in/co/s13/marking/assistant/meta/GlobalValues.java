@@ -7,6 +7,7 @@ package in.co.s13.marking.assistant.meta;
 
 import java.io.File;
 import java.util.ArrayList;
+import javafx.scene.image.Image;
 import javafx.scene.input.DataFormat;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -33,4 +34,10 @@ public class GlobalValues {
     public static DataFormat datFormat = new DataFormat("feedback/entry");
     public static SettingsEntry settings = new SettingsEntry();
     public static boolean showFeedBackInSeprateWindow = false;
+
+    /**
+     *
+     */
+    public static Image appIcon= new Image(("icons/clipboard_16.png"));
+    
 }

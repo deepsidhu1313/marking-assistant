@@ -127,32 +127,37 @@ public class FixNameWindow extends Application {
         TreeItem<String> root = new TreeItem<>("ASSIGNMENTS");
         for (int i = 0; i < files.length; i++) {
             File file = files[i];
-            String name = file.getName();
-            System.out.println("" + name);
-            String newName = "";
-            String dirName = "";
-            switch (fileNameSelection) {
-                case 0:
-                    dirName
-                            = name.substring(name.indexOf("-", 8) + 1, name.indexOf("-", 15)).trim();
-                    newName = name.substring(name.lastIndexOf("-") + 1).trim();
-                    break;
-            }
-            switch (actionSelection) {
-                case 0:
-                    if (!hasChildWithSameName(root, dirName)) {
-                        root.getChildren().add(new TreeItem<String>(dirName));
-                        dirCount++;
+            if (!file.isDirectory()) {
+                String name = file.getName();
+                System.out.println("" + name);
+                String newName = "";
+                String dirName = "";
+                System.out.println("is renaming " + name);
+                switch (fileNameSelection) {
+                    case 0:
+                        int firstOccur = name.indexOf("-");
+                        int secondOccur = name.indexOf("-", firstOccur + 1);
+                        int thirdOccur = name.indexOf("-", secondOccur + 1);
+                        dirName = name.substring(secondOccur + 1, thirdOccur).trim();
+                        newName = name.substring(name.lastIndexOf("-") + 1).trim();
+                        break;
+                }
+                switch (actionSelection) {
+                    case 0:
+                        if (!hasChildWithSameName(root, dirName)) {
+                            root.getChildren().add(new TreeItem<String>(dirName));
+                            dirCount++;
 
-                    }
-                    TreeItem<String> dirtreeItem = getChildWithSameName(root, dirName);
-                    if (!hasChildWithSameName(dirtreeItem, newName)) {
-                        dirtreeItem.getChildren().add(new TreeItem<>(newName));
-                        fileCount++;
-                    }
-                    break;
-            }
+                        }
+                        TreeItem<String> dirtreeItem = getChildWithSameName(root, dirName);
+                        if (!hasChildWithSameName(dirtreeItem, newName)) {
+                            dirtreeItem.getChildren().add(new TreeItem<>(newName));
+                            fileCount++;
+                        }
+                        break;
+                }
 
+            }
         }
         VBox preVBox = new VBox(10);
         Label prevLabel = new Label("Total Files: " + totFiles + "\t New Dirs Created: "
@@ -175,29 +180,34 @@ public class FixNameWindow extends Application {
 
         for (int i = 0; i < files.length; i++) {
             File file = files[i];
-            String name = file.getName();
-            String newName = "";
-            String dirName = "";
-            switch (fileNameSelection) {
-                case 0:
-                    dirName
-                            = name.substring(name.indexOf("-", 8) + 1, name.indexOf("-", 15)).trim();
-                    newName = name.substring(name.lastIndexOf("-") + 1).trim();
-                    break;
-            }
-            switch (actionSelection) {
-                case 0:
+            if (!file.isDirectory()) {
+                String name = file.getName();
+                String newName = "";
+                String dirName = "";
+                switch (fileNameSelection) {
+                    case 0:
+
+                        int firstOccur = name.indexOf("-");
+                        int secondOccur = name.indexOf("-", firstOccur + 1);
+                        int thirdOccur = name.indexOf("-", secondOccur + 1);
+                        dirName = name.substring(secondOccur + 1, thirdOccur).trim();
+                        newName = name.substring(name.lastIndexOf("-") + 1).trim();
+                        break;
+                }
+                switch (actionSelection) {
+                    case 0:
 //                    if (new File("ASSIGNMENTS/" + dirName).exists()) {
 //                        System.out.println(" Dir Created: " + new File("ASSIGNMENTS/" + dirName).mkdirs());
 //                      
 //
 //                    }
-                    System.out.println(" Dir Created: " +Tools.createDirectory("ASSIGNMENTS/" + dirName));
-                    System.out.println(" Renamed: " + Tools.renameFile(file, new File("ASSIGNMENTS/" + dirName + "/" + newName)));
-                    
-                    break;
-            }
+                        System.out.println(" Dir Created: " + Tools.createDirectory("ASSIGNMENTS/" + dirName));
+                        System.out.println(" Renamed: " + Tools.renameFile(file, new File("ASSIGNMENTS/" + dirName + "/" + newName)));
 
+                        break;
+                }
+
+            }
         }
     }
 

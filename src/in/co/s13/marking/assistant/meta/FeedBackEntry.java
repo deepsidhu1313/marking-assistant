@@ -124,10 +124,11 @@ public class FeedBackEntry implements Serializable {
     }
 
     public Color getColor() {
+        double minm=this.minimumMarks;
         if (this.minimumMarks == Double.MIN_VALUE) {
-            this.minimumMarks = (this.maximumMarks * (-1));
+            minm = 0;
         }
-        double ratio = this.obtainedMarks / (this.maximumMarks - minimumMarks);
+        double ratio = (getObtainedMarks()-minm) / (this.maximumMarks - minm);
         if (ratio > .8) {
             return Color.DARKGREEN;
         } else if (ratio <= .8 && ratio > .6) {

@@ -691,15 +691,18 @@ public class Tools {
                         String marksString = line.substring(line.indexOf("[") + 1, line.indexOf("]"));
                         String commentString = line.substring(line.indexOf("]") + 1).trim();
                         double maxm = 0;
+                        double obtm = 0;
                         double minm = Double.MIN_VALUE;
                         if (marksString.contains("/")) {
                             String marks[] = marksString.split("/");
                             if (marks.length == 2) {
                                 minm = Double.parseDouble(marks[0].trim());
                                 maxm = Double.parseDouble(marks[1].trim());
-                            } else if (marks.length == 1) {
-                                maxm = Double.parseDouble(marks[0].trim());
-
+                            } else if (marks.length == 3) {
+                                minm = Double.parseDouble(marks[0].trim());
+                                obtm = Double.parseDouble(marks[1].trim());
+                                maxm = Double.parseDouble(marks[2].trim());
+                            
                             }
                         } else {
                             maxm = Double.parseDouble(marksString.trim());

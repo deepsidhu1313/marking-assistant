@@ -85,6 +85,7 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.Tooltip;
+import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
@@ -208,7 +209,7 @@ public class MainWindow extends Application {
         if (!feedBackStage.isFocused()) {
             feedBackStage.setFocused(true);
         }
-        
+
     }
 
     public static void appendLogToLogArea(String Text) {
@@ -377,7 +378,8 @@ public class MainWindow extends Application {
         } catch (Exception e) {
             Tools.parseFeedbackTemplate();
         }
-//        GlobalValues.sessionSettings.getRunSettings().get(2).setLocation("local");
+//        GlobalValues.sessionSettings.getRunSettings().get(0).setSampleOutPutFile(new File("/home/nika/NetBeansProjects/Marking Assistant/SOLUTION/a2/bristow/sample.txt"));
+//        GlobalValues.sessionSettings.getRunSettings().get(1).setSampleOutPutFile(new File("/home/nika/NetBeansProjects/Marking Assistant/SOLUTION/a2/bristow/sample2.txt"));
 //        System.out.println(""+GlobalValues.sessionSettings.getRunSettings().get(2));
 //        Tools.writeObject(choice.getAbsolutePath(), GlobalValues.sessionSettings);
 
@@ -645,7 +647,7 @@ public class MainWindow extends Application {
                             feedbackContent.append(line.toString()).append("\n");
                         } else if (line.getFeedBack().trim().equalsIgnoreCase("Total WIth Bonus")) {
 
-                        }else if (line.getFeedBack().trim().equalsIgnoreCase("Section End")) {
+                        } else if (line.getFeedBack().trim().equalsIgnoreCase("Section End")) {
 
                         } else if (line.getFeedBack().trim().equalsIgnoreCase("Bonus")) {
 
@@ -657,8 +659,8 @@ public class MainWindow extends Application {
 
                         }
                     }
-                    
-                    Tools.write(new File("FEEDBACK/" + GlobalValues.sessionSettings.getSession_name() + "/"+get.getName()+"-feedback.txt"), feedbackContent.toString());
+
+                    Tools.write(new File("FEEDBACK/" + GlobalValues.sessionSettings.getSession_name() + "/" + get.getName() + "-feedback.txt"), feedbackContent.toString());
                 }
 
             }
@@ -695,16 +697,19 @@ public class MainWindow extends Application {
 
     void openFilesForStudent(File get) {
         File files[] = get.listFiles();
+        Arrays.sort(files);
         for (int i = 0; i < files.length; i++) {
             File file = files[i];
             if (!file.isDirectory()) {
-                if (!file.getName().endsWith(".class")) {
-                    try {
-                        if (Tools.read(file).length() > 1) {
-                            addTab(file, tabcounter.get());
+                if (file.length() < 10 * 1024 * 1024) {
+                    if (!file.getName().endsWith(".class")) {
+                        try {
+                            if (Tools.read(file).length() > 1) {
+                                addTab(file, tabcounter.get());
+                            }
+                        } catch (IOException ex) {
+                            Logger.getLogger(MainWindow.class.getName()).log(Level.SEVERE, null, ex);
                         }
-                    } catch (IOException ex) {
-                        Logger.getLogger(MainWindow.class.getName()).log(Level.SEVERE, null, ex);
                     }
                 }
             }
@@ -1063,10 +1068,11 @@ public class MainWindow extends Application {
         Scene myScene = new Scene(bp);
         this.stage.setScene(myScene);
         this.stage.sizeToScene();
-        this.stage.setWidth(primaryScreenBounds.getWidth() - 100);
-        this.stage.setHeight(primaryScreenBounds.getHeight() - 100);
-        this.stage.setX(100);
-        this.stage.setY(100);
+        this.stage.setWidth(primaryScreenBounds.getWidth());
+        this.stage.setHeight(primaryScreenBounds.getHeight());
+        this.stage.getIcons().add(GlobalValues.appIcon);
+        this.stage.setX(00);
+        this.stage.setY(00);
         this.stage.show();
         firstDiag();
         ideStarted = true;

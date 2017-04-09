@@ -517,8 +517,8 @@ public class FeedbackArea extends BorderPane {
                 feedbackDB.getItems().addAll(GlobalValues.feedbackDBArray);
                 feedbackDB.getSelectionModel().select(feedbackDB.getItems().size() - 1);
                 maxMTF.setText("");
-                minMTF.setText("");
-                obtMTF.setText("" + Double.MIN_VALUE);
+                obtMTF.setText("");
+                minMTF.setText("" + Double.MIN_VALUE);
                 feedCommTF.setText("");
                 dupCB.getSelectionModel().selectFirst();
                 typCB.getSelectionModel().selectFirst();
@@ -692,6 +692,7 @@ public class FeedbackArea extends BorderPane {
                     feedbackStu.getItems().add(index + i, new FeedBackEntry(feedbackStu.getItems().size(), get));
 
                 }
+                lastFocused=1;
                 //feedbackStu.getItems().add(feedbackStu.getSelectionModel().getSelectedIndex(), new FeedBackEntry(feedbackStu.getItems().size(), feedbackDB.getSelectionModel().getSelectedItem()));
 
             }
@@ -887,7 +888,7 @@ public class FeedbackArea extends BorderPane {
 
         controlsVBox.setAlignment(Pos.CENTER);
         altButtonGP.add(controlsVBox, 0, 0);
-       // altButtonGP.setAlignment(Pos.CENTER);
+        //altButtonGP.setAlignment(Pos.CENTER);
         altButtonGP.setVgap(15);
         grid.getColumnConstraints().add(column1);
         ColumnConstraints column3 = new ColumnConstraints();
