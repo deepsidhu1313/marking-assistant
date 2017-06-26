@@ -21,11 +21,12 @@ public class SessionSettings implements Serializable {
     private int numberOfCompilerSettings, numberOfRunSettings, remotePort;
     private ArrayList<CompilerSetting> compilerSettings;
     private ArrayList<RunSetting> runSettings;
+    private ArrayList<String> ignoreList = new ArrayList<>();
     private String feedbackTemplate;
     private File lastStudentMarked, CurrentStudent;
     private String remoteOS;
 
-    public SessionSettings(String session_name, File lastStudentMarked, File CurrentStudent, int numberOfCompilerSettings, int numberOfRunSettings, ArrayList<CompilerSetting> compilerSettings, ArrayList<RunSetting> runSettings, String feedbackTemplate, String remoteHost, int remotePort, String remoteUserName, String remotePassword, String remoteOS) {
+    public SessionSettings(String session_name, File lastStudentMarked, File CurrentStudent, int numberOfCompilerSettings, int numberOfRunSettings, ArrayList<CompilerSetting> compilerSettings, ArrayList<RunSetting> runSettings, String feedbackTemplate, String remoteHost, int remotePort, String remoteUserName, String remotePassword, String remoteOS,ArrayList<String> ignoreList ) {
         this.session_name = session_name;
         this.lastStudentMarked = lastStudentMarked;
         this.CurrentStudent = CurrentStudent;
@@ -39,6 +40,7 @@ public class SessionSettings implements Serializable {
         this.remoteUserName = remoteUserName;
         this.remotePassword = remotePassword;
         this.remoteOS = remoteOS;
+        this.ignoreList=ignoreList;
     }
 
     public String getSession_name() {
@@ -145,6 +147,16 @@ public class SessionSettings implements Serializable {
         this.remoteOS = remoteOS;
     }
 
+    public ArrayList<String> getIgnoreList() {
+        return ignoreList;
+    }
+
+    public void setIgnoreList(ArrayList<String> ignoreList) {
+        this.ignoreList = ignoreList;
+    }
+
+    
+    
     @Override
     public boolean equals(Object obj) {
         if (this == obj) {

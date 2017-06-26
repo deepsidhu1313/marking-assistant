@@ -495,8 +495,8 @@ public class FeedbackArea extends BorderPane {
             @Override
             public void handle(ActionEvent event) {
                 maxMTF.setText("");
-                minMTF.setText("");
-                obtMTF.setText("" + Double.MIN_VALUE);
+                obtMTF.setText("");
+                minMTF.setText("" + Double.MIN_VALUE);
                 feedCommTF.setText("");
                 dupCB.getSelectionModel().selectFirst();
                 typCB.getSelectionModel().selectFirst();
@@ -547,8 +547,8 @@ public class FeedbackArea extends BorderPane {
                 feedbackDB.getItems().add(index, fbe);
                 feedbackDB.getSelectionModel().clearAndSelect(index);
                 maxMTF.setText("");
-                minMTF.setText("");
-                obtMTF.setText("" + Double.MIN_VALUE);
+                obtMTF.setText("");
+                minMTF.setText("" + Double.MIN_VALUE);
                 feedCommTF.setText("");
                 dupCB.getSelectionModel().selectFirst();
                 typCB.getSelectionModel().selectFirst();
@@ -583,6 +583,7 @@ public class FeedbackArea extends BorderPane {
         Button incAltButton = new Button("Increment Score");
         Button decrAltButton = new Button("Decrement Score");
         Button giveZeroAltButton = new Button("Give 0 Score");
+        Button giveHalfAltButton = new Button("Give Half Score");
         Button giveFullAltButton = new Button("Give Full Score");
         Button addAltButton = new Button("Add");
         Button remAltButton = new Button("Remove");
@@ -677,6 +678,28 @@ public class FeedbackArea extends BorderPane {
                 }
             }
         });
+        
+        giveHalfAltButton.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                if (lastFocused == 1) {
+                    List<FeedBackEntry> items = feedbackStu.getSelectionModel().getSelectedItems();
+                    for (int i = 0; i < items.size(); i++) {
+                        FeedBackEntry get = items.get(i);
+                        get.setObtainedMarks(get.getMaximumMarks()/2);
+
+                    }
+                }
+                if (lastFocused == 2) {
+                    List<FeedBackEntry> selectedItems = feedbackDB.getSelectionModel().getSelectedItems();
+                    for (int i = 0; i < selectedItems.size(); i++) {
+                        FeedBackEntry get = selectedItems.get(i);
+                        get.setObtainedMarks(get.getMaximumMarks()/2);
+                    }
+                }
+            }
+        });
+
 
         addAltButton.setOnAction(new EventHandler<ActionEvent>() {
             @Override
@@ -854,6 +877,7 @@ public class FeedbackArea extends BorderPane {
         incAltButton.setMaxWidth(Double.MAX_VALUE);
         decrAltButton.setMaxWidth(Double.MAX_VALUE);
         giveZeroAltButton.setMaxWidth(Double.MAX_VALUE);
+        giveHalfAltButton.setMaxWidth(Double.MAX_VALUE);
         giveFullAltButton.setMaxWidth(Double.MAX_VALUE);
         //feedbackLabel.setMaxWidth(Double.MAX_VALUE);
         addAltButton.setMaxWidth(Double.MAX_VALUE);
@@ -873,6 +897,7 @@ public class FeedbackArea extends BorderPane {
         controlsVBox.getChildren().addAll(marksLabel, incAltButton,
                 decrAltButton,
                 giveZeroAltButton,
+                giveHalfAltButton,
                 giveFullAltButton,
                 reg, feedbackLabel,
                 addAltButton,
@@ -996,7 +1021,7 @@ public class FeedbackArea extends BorderPane {
             }
 
             if (get.getType() == FeedBackEntry.EntryType.SECTION_START && !hasNoChildren(get)) {
-                // sectioncounter++;
+//                 sectioncounter++;
                 score += calculateMarks(get);
                 i = getSectionEndIndex(get) - 1;
             } else if (get.getType() == FeedBackEntry.EntryType.SECTION_START && hasNoChildren(get)) {
@@ -1004,13 +1029,13 @@ public class FeedbackArea extends BorderPane {
                 score += (get.getObtainedMarks());
             } else if (get.getType() == FeedBackEntry.EntryType.FEEDBACK) {
                 score += (get.getObtainedMarks());
-                // System.out.println("Score for " + get);
+                 System.out.println("Score for " + get);
             }
         }
         if (!hasNoChildren(fb)) {
             fb.setObtainedMarks(score);
         }
-        System.out.println("Score for " + fb);
+        System.out.println("Score for " + fb+" "+score);
         return score;
     }
 

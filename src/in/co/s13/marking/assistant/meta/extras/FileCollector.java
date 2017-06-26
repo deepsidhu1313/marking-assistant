@@ -43,11 +43,11 @@ public class FileCollector implements Callable<ArrayList<File>> {
     public ArrayList<File> call() throws Exception {
         Thread.sleep(1000);
 
-        return getJavaFiles(path);
+        return getFiles(path);
 
     }
 
-    public ArrayList<File> getJavaFiles(String dir) {
+    public ArrayList<File> getFiles(String dir) {
         ArrayList<File> list = new ArrayList<>();
         File directory = new File(dir);
         File[] files = directory.listFiles();
@@ -55,7 +55,7 @@ public class FileCollector implements Callable<ArrayList<File>> {
             File file = files[i];
             if (file.isDirectory()) {
 
-                list.addAll(getJavaFiles(file.getAbsolutePath()));
+                list.addAll(getFiles(file.getAbsolutePath()));
             } else if (expectedTo == PATTERN.endsWith) {
                 if (file.getName().endsWith(pattern)) {
                     list.add(file);

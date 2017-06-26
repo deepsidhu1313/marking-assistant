@@ -11,6 +11,7 @@ import in.co.s13.marking.assistant.meta.GlobalValues;
 import static in.co.s13.marking.assistant.meta.GlobalValues.showFeedBackInSeprateWindow;
 import in.co.s13.marking.assistant.meta.RunSetting;
 import in.co.s13.marking.assistant.meta.SessionSettings;
+import in.co.s13.marking.assistant.meta.extras.FileCollector;
 import in.co.s13.marking.assistant.tools.ExecuteOverNetwork;
 import in.co.s13.marking.assistant.tools.PrepareRemote;
 import in.co.s13.marking.assistant.tools.Tools;
@@ -76,6 +77,8 @@ import javax.swing.UnsupportedLookAndFeelException;
 import in.co.s13.marking.assistant.ui.CustomTree;
 import in.co.s13.syntaxtextareafx.SyntaxTextAreaFX;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -84,7 +87,9 @@ import javafx.geometry.HPos;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.PasswordField;
+import javafx.scene.control.ScrollBar;
 import javafx.scene.control.Tooltip;
+import javafx.scene.control.TreeView;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
@@ -127,9 +132,12 @@ public class MainWindow extends Application {
     public static Tab tab23;
     public static Tab tab24;
     public static AtomicInteger tabcounter = new AtomicInteger(0);
+    ExecutorService executorService = Executors.newFixedThreadPool(3);
+    Stage st = new Stage();
+    Stage stage = new Stage();
 
-    public static synchronized void IncrementTabcounter() {
-        tabcounter.incrementAndGet();
+    public static synchronized int IncrementTabcounter() {
+        return tabcounter.incrementAndGet();
     }
 
     public static synchronized void addTab(File selectedFile, int tabcounter) {
@@ -240,10 +248,6 @@ public class MainWindow extends Application {
         MainWindow.launch(args);
     }
 
-    ExecutorService executorService = Executors.newFixedThreadPool(8);
-    Stage st = new Stage();
-    Stage stage = new Stage();
-
     void closeAllTabs() {
         centerTabPane.getTabs().clear();
         GlobalValues.listOpenedFiles.clear();
@@ -262,6 +266,8 @@ public class MainWindow extends Application {
 
     public void doCompareThis(File studentDir) {
         showLogArea();
+        pi.setProgress(-1);
+        ArrayList<Thread> threadList = new ArrayList<>();
         ArrayList<RunSetting> runSettings = GlobalValues.sessionSettings.getRunSettings();
         for (int i = 0; i < runSettings.size(); i++) {
 
@@ -286,12 +292,44 @@ public class MainWindow extends Application {
 
                 if (file.isDirectory()) {
                     Tools.copyReqFiles(file.getAbsolutePath() + "/", complierReqFiles);
-                    Tools.runFiles(executorService, id, "diff", file.getAbsolutePath(), "/bin/bash", scriptName, file.getAbsolutePath(), get.getSampleOutPutFile().getAbsolutePath(), "run-out-" + id + ".log");
+                    Thread t = Tools.runFiles(executorService, id, "diff", file.getAbsolutePath(), "/bin/bash", scriptName, file.getAbsolutePath(), get.getSampleOutPutFile().getAbsolutePath(), "run-out-" + id + ".log");
+                    threadList.add(t);
                 }
 
             }
         }
 
+        Thread t = new Thread(() -> {
+            for (int i = 0; i < threadList.size(); i++) {
+                Thread get = threadList.get(i);
+                while (get.isAlive()) {
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException ex) {
+                        Logger.getLogger(MainWindow.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                }
+            }
+
+            Platform.runLater(() -> {
+                pi.setProgress(0);
+            });
+        });
+
+        t.start();
+
+    }
+
+    void doUnpackArchivesAll() {
+        ArrayList<File> archives = FileCollector.callGetFiles("ASSIGNMENTS", ".zip", FileCollector.PATTERN.endsWith, executorService);
+        for (int i = 0; i < archives.size(); i++) {
+            File get = archives.get(i);
+            doUnpack(get);
+        }
+    }
+
+    void doUnpack(File file) {
+        Tools.unpackFile(file.getParentFile().getAbsolutePath(), file.getName(), file.getParentFile().getAbsolutePath(), executorService);
     }
 
     public void doCompileAll() {
@@ -310,6 +348,8 @@ public class MainWindow extends Application {
     public void doCompileThis(File studentDir) {
         showLogArea();
         ArrayList<CompilerSetting> compilerSettings = GlobalValues.sessionSettings.getCompilerSettings();
+        pi.setProgress(-1);
+        ArrayList<Thread> threadList = new ArrayList<>();
         for (int i = 0; i < compilerSettings.size(); i++) {
             CompilerSetting get = compilerSettings.get(i);
             int id = get.getId();
@@ -330,7 +370,8 @@ public class MainWindow extends Application {
                 File file = studentDir;
                 if (file.isDirectory()) {
                     Tools.copyReqFiles(file.getAbsolutePath() + "/", complierReqFiles);
-                    Tools.runFiles(executorService, id, "compile", file.getAbsolutePath(), "/bin/bash", scriptName, file.getAbsolutePath());
+                    Thread t = Tools.runFiles(executorService, id, "compile", file.getAbsolutePath(), "/bin/bash", scriptName, file.getAbsolutePath());
+                    threadList.add(t);
                 }
             } else {
                 //PrepareRemote pepRem = new PrepareRemote();
@@ -359,6 +400,26 @@ public class MainWindow extends Application {
             }
         }
 
+        Thread t = new Thread(() -> {
+            for (int i = 0; i < threadList.size(); i++) {
+                Thread get = threadList.get(i);
+                while (get.isAlive()) {
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException ex) {
+                        Logger.getLogger(MainWindow.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+
+                }
+            }
+
+            Platform.runLater(() -> {
+                pi.setProgress(0);
+            });
+        });
+
+        t.start();
+
     }
 
     public boolean doContinueSession() {
@@ -382,6 +443,9 @@ public class MainWindow extends Application {
 //        GlobalValues.sessionSettings.getRunSettings().get(1).setSampleOutPutFile(new File("/home/nika/NetBeansProjects/Marking Assistant/SOLUTION/a2/bristow/sample2.txt"));
 //        System.out.println(""+GlobalValues.sessionSettings.getRunSettings().get(2));
 //        Tools.writeObject(choice.getAbsolutePath(), GlobalValues.sessionSettings);
+//        GlobalValues.sessionSettings.getIgnoreList().add(".zip");
+//        GlobalValues.sessionSettings.getIgnoreList().add(".tar.gz");
+//        Tools.writeObject(("app/sessions/" + GlobalValues.sessionSettings.getSession_name() + ".obj"), GlobalValues.sessionSettings);
 
         System.out.println("Last Session" + GlobalValues.sessionSettings);
         if (GlobalValues.sessionSettings.getCurrentStudent().getName().length() < 1) {
@@ -494,7 +558,9 @@ public class MainWindow extends Application {
 
     public void doRunThis(File studentDir) {
         showLogArea();
+        pi.setProgress(-1);
         ArrayList<RunSetting> runSettings = GlobalValues.sessionSettings.getRunSettings();
+        ArrayList<Thread> threadList = new ArrayList<>();
         for (int i = 0; i < runSettings.size(); i++) {
             RunSetting get = runSettings.get(i);
             int id = get.getId();
@@ -526,7 +592,8 @@ public class MainWindow extends Application {
                         Tools.write(new File(file.getAbsolutePath() + "/input-" + id), get.getInputSequence());
                     }
                     System.out.println("Ran locally " + id);
-                    Tools.runFiles(executorService, id, "run", file.getAbsolutePath(), "/bin/bash", scriptName, file.getAbsolutePath());
+                    Thread t = Tools.runFiles(executorService, id, "run", file.getAbsolutePath(), "/bin/bash", scriptName, file.getAbsolutePath());
+                    threadList.add(t);
                 }
             } else {
 //                PrepareRemote pepRem = new PrepareRemote();
@@ -542,6 +609,26 @@ public class MainWindow extends Application {
             }
             System.out.println(get.getLocation().trim() + " Ran locally ::: " + id + " equals " + get.getLocation().trim().toLowerCase().equalsIgnoreCase("local".trim()));
         }
+
+        Thread t = new Thread(() -> {
+            for (int i = 0; i < threadList.size(); i++) {
+                Thread get = threadList.get(i);
+                while (get.isAlive()) {
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException ex) {
+                        Logger.getLogger(MainWindow.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+
+                }
+            }
+
+            Platform.runLater(() -> {
+                pi.setProgress(0);
+            });
+        });
+
+        t.start();
 
     }
 
@@ -628,7 +715,7 @@ public class MainWindow extends Application {
 
     public void generateCSVReport() {
         ArrayList<File> dirs = Tools.getDirsInAssignmentDir();
-        StringBuilder sb = new StringBuilder("Name,Total Marks, Bonus\n");
+        StringBuilder sb = new StringBuilder("Name,Total Marks\n");
         new File("FEEDBACK/" + GlobalValues.sessionSettings.getSession_name() + "/").mkdirs();
         for (int i = 0; i < dirs.size(); i++) {
             File get = dirs.get(i);
@@ -639,9 +726,10 @@ public class MainWindow extends Application {
                 if (!file.isDirectory() && file.getName().endsWith("feedback")) {
                     StringBuilder feedbackContent = new StringBuilder();
                     ArrayList<FeedBackEntry> content = (ArrayList<FeedBackEntry>) Tools.readObject(file.getAbsolutePath());
+                    int toremove = Integer.MIN_VALUE;
                     for (int k = 0; k < content.size(); k++) {
                         FeedBackEntry line = content.get(k);
-                        if (line.getFeedBack().trim().equalsIgnoreCase("ASSIGNMENT TOTAL")) {
+                        if (line.getFeedBack().trim().equalsIgnoreCase("Assignment Total")) {
                             System.out.println("" + line.toString());
                             sb.append(line.getObtainedMarks()).append(", ");
                             feedbackContent.append(line.toString()).append("\n");
@@ -649,8 +737,8 @@ public class MainWindow extends Application {
 
                         } else if (line.getFeedBack().trim().equalsIgnoreCase("Section End")) {
 
-                        } else if (line.getFeedBack().trim().equalsIgnoreCase("Bonus")) {
-
+                        } else if (line.getFeedBack().trim().equalsIgnoreCase("Bonus Attempt")) {
+                            toremove = k;
                             {
                                 sb.append("X, ");
                             }
@@ -659,7 +747,11 @@ public class MainWindow extends Application {
 
                         }
                     }
-
+//                    if(toremove!=Integer.MIN_VALUE){
+//                    content.remove(toremove);
+//                    }
+//                    Tools.writeObject(""+file.getAbsolutePath(), content);
+//                    
                     Tools.write(new File("FEEDBACK/" + GlobalValues.sessionSettings.getSession_name() + "/" + get.getName() + "-feedback.txt"), feedbackContent.toString());
                 }
 
@@ -698,12 +790,14 @@ public class MainWindow extends Application {
     void openFilesForStudent(File get) {
         File files[] = get.listFiles();
         Arrays.sort(files);
+
         for (int i = 0; i < files.length; i++) {
             File file = files[i];
             if (!file.isDirectory()) {
-                if (file.length() < 10 * 1024 * 1024) {
-                    if (!file.getName().endsWith(".class")) {
+                if (file.length() < 500 * 1024) {
+                    if (!checkIgnoreList(file)) {
                         try {
+                            System.out.println("Opening File: " + file.getAbsolutePath());
                             if (Tools.read(file).length() > 1) {
                                 addTab(file, tabcounter.get());
                             }
@@ -713,6 +807,7 @@ public class MainWindow extends Application {
                     }
                 }
             }
+            pi.setProgress((double) i / (double) files.length);
         }
         if (!Arrays.asList(files).contains(new File(get.getAbsolutePath() + "/feedback"))) {
             addTab(new File(get.getAbsolutePath() + "/feedback"), tabcounter.get());
@@ -721,6 +816,7 @@ public class MainWindow extends Application {
         FilesTree.expandFolder(get);
         synchroniseUi();
         FilesTree.scrollTo(get);
+        pi.setProgress(0);
     }
 
     void refresh() {
@@ -735,6 +831,17 @@ public class MainWindow extends Application {
                 break;
             }
         }
+    }
+
+    private boolean checkIgnoreList(File file) {
+        ArrayList<String> ignList = GlobalValues.sessionSettings.getIgnoreList();
+        for (int i = 0; i < ignList.size(); i++) {
+            String get = ignList.get(i);
+            if (file.getName().toLowerCase().trim().endsWith(get.toLowerCase().trim())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public void showLogArea() {
@@ -869,6 +976,14 @@ public class MainWindow extends Application {
 
         });
         menuFix.getItems().add(renameItem);
+
+        MenuItem unpackZipsItem = new MenuItem("Unpack Archives in same dir");
+        unpackZipsItem.setOnAction((ActionEvent event) -> {
+            synchroniseUi();
+            doUnpackArchivesAll();
+        });
+        menuFix.getItems().add(unpackZipsItem);
+
         Menu menuRun = new Menu("Run");
         MenuItem itemCompileThis = new MenuItem("Compile This Folder");
         itemCompileThis.setOnAction(new EventHandler() {
@@ -1046,7 +1161,7 @@ public class MainWindow extends Application {
 
         statusBar.setAlignment(Pos.CENTER_RIGHT);
         statusBar.getChildren().add(pi);
-// bp.setBottom(statusBar);
+        bp.setBottom(statusBar);
         SplitPane t1 = new SplitPane();
         t1.prefHeight(0);
         t1.maxWidth(0);
@@ -1100,14 +1215,33 @@ public class MainWindow extends Application {
 
             @Override
             public void run() {
-
+                double position[] = new double[]{0.0d};
+                Optional<ScrollBar> scroll = findScrollBar(FilesTree.tv, Orientation.VERTICAL);
+                scroll.ifPresent(s -> position[0] = s.getValue());
                 filesTab.setContent(FilesTree.tv);
                 // filesTab.setContent(FilesTree.tv);
                 //           settings.outPrintln("" + Scanner.NetScanner.livehosts);
+                scroll.ifPresent(s -> s.setValue(position[0]));
 
             }
         });
 
+    }
+
+    /**
+     * **
+     * Solution by @monolith52
+     *
+     * @param from
+     * @param orientation
+     * @return
+     */
+    private Optional<ScrollBar> findScrollBar(TreeView<File> from, Orientation orientation) {
+        Set<Node> nodes = from.lookupAll(".scroll-bar");
+        return nodes.stream()
+                .filter(node -> node instanceof ScrollBar && ((ScrollBar) node).getOrientation() == orientation)
+                .map(node -> ((ScrollBar) node))
+                .findFirst();
     }
 
     void toggleFeedbackArea(boolean b) {

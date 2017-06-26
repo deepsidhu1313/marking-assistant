@@ -203,7 +203,7 @@ public class Tools {
         writeObject(("FEEDBACK/" + GlobalValues.sessionSettings.getSession_name() + "-feedback-db.fdb"), GlobalValues.feedbackDBArray);
     }
 
-    public static void run(ExecutorService executorService, int counter, String foldername, String... commands) {
+    public static Thread run(ExecutorService executorService, int counter, String foldername, String... commands) {
         Thread t = new Thread(new Runnable() {
             @Override
             public void run() {
@@ -235,6 +235,7 @@ public class Tools {
             }
         });
         executorService.submit(t);
+        return t;
     }
 
     /**
@@ -245,7 +246,7 @@ public class Tools {
      * reside
      * @param main : name of the main class
      */
-    public static void runFiles(ExecutorService executorService, int i, String type, String path, String... commands) {
+    public static Thread runFiles(ExecutorService executorService, int i, String type, String path, String... commands) {
         Thread t = new Thread(new Runnable() {
             @Override
             public void run() {
@@ -320,6 +321,7 @@ public class Tools {
             }
         });
         executorService.submit(t);
+        return t;
     }
 
     /**
@@ -581,72 +583,25 @@ public class Tools {
 
     /**
      * *
-     * Create Scripts used to Compile and Run JAVA files, Also creates a script
-     * to generate difference of output file from original output file
+     * Create Scripts used to unpack archives
+     * 
      */
-    public static void createCompilerScript() {
-        try {
-            try (PrintWriter scriptWriter = new PrintWriter("compile.sh", "UTF-8")) {
-                scriptWriter.append("#!/bin/bash \n"
-                        + "\n"
-                        + "cd \"${1}/\"\n"
-                        + "clang -Wall nthword.c -o nthword.out \n"
-                        + "clang -Wall -DNDEBUG levenshtein.c -o levenshtein.out");
-            }
+    
 
-        } catch (FileNotFoundException | UnsupportedEncodingException ex) {
+    public static void createUnpackScript() {
+        try (PrintWriter scriptWriter = new PrintWriter("unpack.sh", "UTF-8")) {
+            scriptWriter.append("#!/bin/bash \n"
+                    + "\n"
+                    + "cd \"${1}\"\n"
+                    + "if [ ${2: -4} == \".zip\" ];\n"
+                    + "then\n"
+                    + "unzip ${2} -d \"${3}\" && rm ${2}\n"
+                    + "elif [ ${2: -4} == \".rar\" ]; then\n"
+                    + "file-roller ${2} -e ${3}  --force && sleep 10 && rm ${2}\n"
+                    + "fi");
+        } catch (FileNotFoundException ex) {
             Logger.getLogger(Tools.class.getName()).log(Level.SEVERE, null, ex);
-        }
-
-        try {
-            try (PrintWriter scriptWriter = new PrintWriter("exec.sh", "UTF-8")) {
-                scriptWriter.append("#!/bin/bash \n"
-                        + "\n"
-                        + "cd \"${1}/\"\n"
-                        + "./${2}");
-            }
-
-        } catch (FileNotFoundException | UnsupportedEncodingException ex) {
-            Logger.getLogger(Tools.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        try {
-            try (PrintWriter scriptWriter = new PrintWriter("exec2.sh", "UTF-8")) {
-                scriptWriter.append("#!/bin/bash \n"
-                        + "\n"
-                        + "cd \"${1}/\"\n"
-                        + "./${2} < ${3}");
-            }
-
-        } catch (FileNotFoundException | UnsupportedEncodingException ex) {
-            Logger.getLogger(Tools.class.getName()).log(Level.SEVERE, null, ex);
-        }
-
-        try {
-            try (PrintWriter scriptWriter = new PrintWriter("diff.sh", "UTF-8")) {
-                scriptWriter.append("#!/bin/bash \n"
-                        + "\n"
-                        + "cd \"${1}\"\n"
-                        + "diff -u -B -b ${2} ${3}");
-            }
-
-        } catch (FileNotFoundException | UnsupportedEncodingException ex) {
-            Logger.getLogger(Tools.class.getName()).log(Level.SEVERE, null, ex);
-        }
-
-        try {
-            try (PrintWriter scriptWriter = new PrintWriter("unpack.sh", "UTF-8")) {
-                scriptWriter.append("#!/bin/bash \n"
-                        + "\n"
-                        + "cd \"${1}\"\n"
-                        + "if [ ${2: -4} == \".zip\" ];\n"
-                        + "then\n"
-                        + "unzip ${2} -d ${3} && rm ${2}\n"
-                        + "elif [ ${2: -4} == \".rar\" ]; then\n"
-                        + "file-roller ${2} -e ${3}  --force && sleep 10 && rm ${2}\n"
-                        + "fi");
-            }
-
-        } catch (FileNotFoundException | UnsupportedEncodingException ex) {
+        } catch (UnsupportedEncodingException ex) {
             Logger.getLogger(Tools.class.getName()).log(Level.SEVERE, null, ex);
         }
 
@@ -679,7 +634,8 @@ public class Tools {
     public static void parseFeedbackTemplate() {
         try {
             GlobalValues.feedbackDBArray = new ArrayList<>();
-            String templateContent = read(GlobalValues.templateFile);
+            System.out.println("" + GlobalValues.sessionSettings.getFeedbackTemplate());
+            String templateContent = read(new File(GlobalValues.sessionSettings.getFeedbackTemplate()));
             FeedBackEntry endSection = new FeedBackEntry(0, 0, 0, 0, "Section End", true, FeedBackEntry.EntryType.SECTION_END, 0);
             GlobalValues.feedbackDBArray.add(endSection);
             GlobalValues.templateFeedback.clear();
@@ -692,7 +648,7 @@ public class Tools {
                         String commentString = line.substring(line.indexOf("]") + 1).trim();
                         double maxm = 0;
                         double obtm = 0;
-                        double minm = Double.MIN_VALUE;
+                        double minm = -9999;
                         if (marksString.contains("/")) {
                             String marks[] = marksString.split("/");
                             if (marks.length == 2) {
@@ -702,20 +658,34 @@ public class Tools {
                                 minm = Double.parseDouble(marks[0].trim());
                                 obtm = Double.parseDouble(marks[1].trim());
                                 maxm = Double.parseDouble(marks[2].trim());
-                            
+
                             }
                         } else {
                             maxm = Double.parseDouble(marksString.trim());
 
                         }
-                        FeedBackEntry fbe = new FeedBackEntry(i, maxm, minm, 0, commentString, true, FeedBackEntry.EntryType.SECTION_START, 0);
+                        if (!(maxm == 0 && minm == 0)) {
+                            FeedBackEntry fbe = new FeedBackEntry(i, maxm, minm, 0, commentString, true, FeedBackEntry.EntryType.SECTION_START, 0);
+                            GlobalValues.feedbackDBArray.add(fbe);
+                            GlobalValues.templateFeedback.add(fbe);
+                            GlobalValues.defaultTemplateFeedback.add(fbe);
+
+                            FeedBackEntry endSection2 = new FeedBackEntry(i, 0, 0, 0, "Section End", true, FeedBackEntry.EntryType.SECTION_END, 0);
+                            GlobalValues.templateFeedback.add(endSection2);
+                            GlobalValues.defaultTemplateFeedback.add(endSection2);
+
+                        } else {
+                            FeedBackEntry fbe = new FeedBackEntry(i, maxm, minm, 0, commentString, true, FeedBackEntry.EntryType.FEEDBACK, 0);
+                            GlobalValues.feedbackDBArray.add(fbe);
+                            GlobalValues.templateFeedback.add(fbe);
+                            GlobalValues.defaultTemplateFeedback.add(fbe);
+
+                        }
+                    } else {
+                        FeedBackEntry fbe = new FeedBackEntry(i, 0, 0, 0, line, true, FeedBackEntry.EntryType.FEEDBACK, 0);
                         GlobalValues.feedbackDBArray.add(fbe);
                         GlobalValues.templateFeedback.add(fbe);
                         GlobalValues.defaultTemplateFeedback.add(fbe);
-
-                        FeedBackEntry endSection2 = new FeedBackEntry(i, 0, 0, 0, "Section End", true, FeedBackEntry.EntryType.SECTION_END, 0);
-                        GlobalValues.templateFeedback.add(endSection2);
-                        GlobalValues.defaultTemplateFeedback.add(endSection2);
 
                     }
                 }

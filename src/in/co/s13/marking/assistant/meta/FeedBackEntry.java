@@ -125,10 +125,12 @@ public class FeedBackEntry implements Serializable {
 
     public Color getColor() {
         double minm=this.minimumMarks;
-        if (this.minimumMarks == Double.MIN_VALUE) {
+        if (this.minimumMarks == -9999) {
             minm = 0;
         }
         double ratio = (getObtainedMarks()-minm) / (this.maximumMarks - minm);
+//        System.out.println("Max: "+maximumMarks+", Min: "+minimumMarks+" Smin:"
+//                +minm+" ratio: "+ratio);
         if (ratio > .8) {
             return Color.DARKGREEN;
         } else if (ratio <= .8 && ratio > .6) {

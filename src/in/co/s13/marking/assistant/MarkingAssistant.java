@@ -36,6 +36,7 @@ public class MarkingAssistant extends Application {
         if(new File("app/settings.obj").exists()){
         Tools.readSettings();
         }
+        Tools.createUnpackScript();
         MainWindow mw = new MainWindow();
         try {
             mw.start(primaryStage);

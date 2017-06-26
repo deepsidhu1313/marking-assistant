@@ -46,7 +46,7 @@ public class FilesTree implements Runnable {
     private static ArrayList<File> expandedDirs = new ArrayList<>();
     private static File selectedProject;
     private static File selectedFile;
-
+    public static TreeItem<File> root;
     private MainWindow mainWindow;
     //SQLiteJDBC treedb = new SQLiteJDBC();
     String sql;
@@ -64,7 +64,7 @@ public class FilesTree implements Runnable {
     }
 
     private TreeView buildFileSystemBrowser() {
-        TreeItem<File> root = createNode(f);
+        root = createNode(f);
         root.setGraphic(new ImageView(folderExpandImage));
         return new TreeView<File>(root);
     }
@@ -245,7 +245,7 @@ public class FilesTree implements Runnable {
                         System.out.println("Selected Project Is:" + getProjectName(item));
                         selectedProject = getProjectDir(item);
                         selectedFile = item.getValue();
-                        
+
                         String projectName = getProjectName(item.getValue());
                         if (projectName != null && !(GlobalValues.selectedParentFolder.trim().equalsIgnoreCase(projectName.trim()))) {
                             GlobalValues.selectedParentFolder = projectName.trim();
@@ -372,6 +372,9 @@ public class FilesTree implements Runnable {
                 break;
             case "diff":
                 fileImage = new Image(ClassLoader.getSystemResourceAsStream("icons/diff.png"));
+                break;
+            case "h":
+                fileImage = new Image(ClassLoader.getSystemResourceAsStream("icons/c++hdr.png"));
                 break;
             case "java":
                 fileImage = new Image(ClassLoader.getSystemResourceAsStream("icons/java.png"));

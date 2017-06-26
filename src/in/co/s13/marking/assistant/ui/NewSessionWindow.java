@@ -9,6 +9,8 @@ import in.co.s13.marking.assistant.meta.GlobalValues;
 import in.co.s13.marking.assistant.meta.SessionSettings;
 import in.co.s13.marking.assistant.tools.Tools;
 import java.io.File;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.application.Application;
@@ -51,6 +53,7 @@ public class NewSessionWindow extends Application {
         TextField sessionName = new TextField();
         TextField compileNo = new TextField();
         TextField runNo = new TextField();
+        TextField ignoreListTF = new TextField(".pdf, .doc, .docx, .o , .out , .class, .zip, .tar.gz");
 
         Stage newProjectDialog = new Stage();
         newProjectDialog.setTitle("New Session");
@@ -118,31 +121,33 @@ public class NewSessionWindow extends Application {
         });
 
         grid.add(new Label("Use Remote Machine (ssh):"), 0, 4);
+        grid.add(ignoreListTF, 1, 4);
+        grid.add(new Label("Use Remote Machine (ssh):"), 0, 5);
         Label hostnameLabel = new Label("Host:");
-        grid.add(hostnameLabel, 0, 5);
+        grid.add(hostnameLabel, 0, 6);
         TextField hostnameTF = new TextField();
         hostnameTF.setPromptText(" \"www.example.com\" or \"192.168.1.100\"");
-        grid.add(hostnameTF, 1, 5);
+        grid.add(hostnameTF, 1, 6);
         Label portNoLabel = new Label("Port Number:");
-        grid.add(portNoLabel, 0, 6);
+        grid.add(portNoLabel, 0, 7);
         Spinner<Integer> portSpinner = new Spinner<>(0, 62555, 22);
-        grid.add(portSpinner, 1, 6);
+        grid.add(portSpinner, 1, 7);
         Label usernameLabel = new Label("Username:");
-        grid.add(usernameLabel, 0, 7);
+        grid.add(usernameLabel, 0, 8);
         TextField usernameTF = new TextField();
         usernameTF.setPromptText("user");
-        grid.add(usernameTF, 1, 7);
+        grid.add(usernameTF, 1, 8);
         Label passLabel = new Label("Password:");
-        grid.add(passLabel, 0, 8);
+        grid.add(passLabel, 0, 9);
         TextField passwdTF = new PasswordField();
-        grid.add(passwdTF, 1, 8);
+        grid.add(passwdTF, 1, 9);
         Label osLabel = new Label("Operating System: ");
-        grid.add(osLabel, 0, 9);
+        grid.add(osLabel, 0, 10);
 
         ComboBox<String> osCB = new ComboBox<>();
         osCB.getItems().addAll("linux", "windows");
         osCB.getSelectionModel().select(GlobalValues.OS);
-        grid.add(osCB, 1, 9);
+        grid.add(osCB, 1, 10);
 
         CheckBox enableRemoteCB = new CheckBox();
         hostnameLabel.setDisable(true);
@@ -171,10 +176,10 @@ public class NewSessionWindow extends Application {
 
             }
         });
-        grid.add(enableRemoteCB, 1, 4);
+        grid.add(enableRemoteCB, 1, 5);
 
-        grid.add(okbutton, 0, 10);
-        grid.add(cancelbutton, 1, 10);
+        grid.add(okbutton, 0, 11);
+        grid.add(cancelbutton, 1, 11);
         GridPane.setHgrow(okbutton, Priority.ALWAYS);
         borderPane.setCenter(grid);
 
@@ -213,11 +218,12 @@ public class NewSessionWindow extends Application {
                             Logger.getLogger(MainWindow.class.getName()).log(Level.SEVERE, null, ex);
                         }
                     }
-
+                    ArrayList<String> ignList= new ArrayList<>();
+                    ignList.addAll(Arrays.asList(ignoreListTF.getText().trim().split(",")));
                     GlobalValues.sessionSettings = new SessionSettings(sessionName.getText(),
                             new File(""), new File(""), comNum, runNum, GlobalValues.compilerSettingsList, GlobalValues.runSettingsList,
                             templatePath.getText().trim(), hostnameTF.getText().trim(), portSpinner.getValue(), usernameTF.getText().trim(),
-                            passwdTF.getText().trim(), osCB.getSelectionModel().getSelectedItem());
+                            passwdTF.getText().trim(), osCB.getSelectionModel().getSelectedItem(),ignList);
                     Tools.parseFeedbackTemplate();
                     Tools.writeObject(("app/sessions/" + sessionName.getText() + ".obj"), GlobalValues.sessionSettings);
                     newProjectDialog.hide();
