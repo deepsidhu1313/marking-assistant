@@ -108,16 +108,5 @@ public class RemoteExec {
         fos.close();
     }
 
-    public static void main(String[] arg) {
-        RemoteExec rex = new RemoteExec("rodents.cs.umanitoba.ca", "sidhusn", "7791197", 22, "ls -al", "app/logs/", "cmd");
-        try {
-            rex.execute(1);
-
-        } catch (JSchException ex) {
-            java.util.logging.Logger.getLogger(RemoteExec.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (IOException ex) {
-            java.util.logging.Logger.getLogger(RemoteExec.class.getName()).log(Level.SEVERE, null, ex);
-        }
-    }
 
 }
